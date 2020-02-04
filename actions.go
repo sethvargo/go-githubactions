@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// githubactions provides an SDK for authoring GitHub Actions in Go. It has no
+// external dependencies and provides a Go-like interface for interacting with
+// GitHub Actions' build system.
 package githubactions
 
 import (
