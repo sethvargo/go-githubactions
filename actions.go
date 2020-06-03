@@ -114,9 +114,14 @@ func (c *Action) SetEnv(k, v string) {
 
 // SetOutput sets an output parameter.
 func (c *Action) SetOutput(k, v string) {
+	// escape sequences that GitHub actions will unescape when the output is used.
+	// The list can update. For future reference, list can be found in JS/TS toolkit
+	// https://github.com/actions/toolkit/blob/master/packages/core/src/command.ts
 	v = strings.ReplaceAll(v, "%", "%25")
 	v = strings.ReplaceAll(v, "\n", "%0A")
 	v = strings.ReplaceAll(v, "\r", "%0D")
+	v = strings.ReplaceAll(v, ":", "%3A")
+	v = strings.ReplaceAll(v, ",", "%2C")
 	fmt.Fprintf(c.w, setOutputFmt, k, v)
 }
 
