@@ -114,6 +114,9 @@ func (c *Action) SetEnv(k, v string) {
 
 // SetOutput sets an output parameter.
 func (c *Action) SetOutput(k, v string) {
+	v = strings.ReplaceAll(v, "%", "%25")
+	v = strings.ReplaceAll(v, "\n", "%0A")
+	v = strings.ReplaceAll(v, "\r", "%0D")
 	fmt.Fprintf(c.w, setOutputFmt, k, v)
 }
 
