@@ -66,12 +66,12 @@ type Action struct {
 // AddMask adds a new field mask for the given string "p". After called, future
 // attempts to log "p" will be replaced with "***" in log output.
 func (c *Action) AddMask(p string) {
-	fmt.Fprintf(c.w, addMaskFmt, p)
+	fmt.Fprintf(c.w, addMaskFmt, escapeData(p))
 }
 
 // AddMatcher adds a new matcher with the given file path.
 func (c *Action) AddMatcher(p string) {
-	fmt.Fprintf(c.w, addMatcherFmt, p)
+	fmt.Fprintf(c.w, addMatcherFmt, escapeData(p))
 }
 
 // RemoveMatcher removes a matcher with the given owner name.
@@ -81,12 +81,12 @@ func (c *Action) RemoveMatcher(o string) {
 
 // AddPath adds the string "p" to the path for the invocation.
 func (c *Action) AddPath(p string) {
-	fmt.Fprintf(c.w, addPathFmt, p)
+	fmt.Fprintf(c.w, addPathFmt, escapeData(p))
 }
 
 // SaveState saves state to be used in the "finally" post job entry point.
 func (c *Action) SaveState(k, v string) {
-	fmt.Fprintf(c.w, saveStateFmt, k, v)
+	fmt.Fprintf(c.w, saveStateFmt, k, escapeData(v))
 }
 
 // GetInput gets the input by the given name.
@@ -99,7 +99,7 @@ func (c *Action) GetInput(i string) string {
 
 // Group starts a new collapsable region up to the next ungroup invocation.
 func (c *Action) Group(t string) {
-	fmt.Fprintf(c.w, groupFmt, t)
+	fmt.Fprintf(c.w, groupFmt, escapeData(t))
 }
 
 // EndGroup ends the current group.
@@ -109,19 +109,29 @@ func (c *Action) EndGroup() {
 
 // SetEnv sets an environment variable.
 func (c *Action) SetEnv(k, v string) {
-	fmt.Fprintf(c.w, setEnvFmt, k, v)
+	fmt.Fprintf(c.w, setEnvFmt, k, escapeData(v))
 }
 
 // SetOutput sets an output parameter.
 func (c *Action) SetOutput(k, v string) {
-	// escape sequences that GitHub actions will unescape when the output is used.
-	// The list can update. For future reference, list can be found in JS/TS toolkit's
-	// core/src/command.ts#escapeData().
-	// https://github.com/actions/toolkit/blob/master/packages/core/src/command.ts
+	fmt.Fprintf(c.w, setOutputFmt, k, escapeData(v))
+}
+
+// escapeData escapes string values for presentation in the output of a
+// command. This is a not-so-well-documented requirement of commands that
+// define a message:
+//
+// https://github.com/actions/toolkit/blob/9ad01e4fd30025e8858650d38e95cfe9193a3222/packages/core/src/command.ts#L74
+//
+// The equivalent toolkit function can be found here:
+//
+// https://github.com/actions/toolkit/blob/9ad01e4fd30025e8858650d38e95cfe9193a3222/packages/core/src/command.ts#L92
+//
+func escapeData(v string) string {
 	v = strings.ReplaceAll(v, "%", "%25")
-	v = strings.ReplaceAll(v, "\n", "%0A")
 	v = strings.ReplaceAll(v, "\r", "%0D")
-	fmt.Fprintf(c.w, setOutputFmt, k, v)
+	v = strings.ReplaceAll(v, "\n", "%0A")
+	return v
 }
 
 // Debugf prints a debug-level message. The arguments follow the standard Printf

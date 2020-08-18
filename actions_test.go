@@ -106,12 +106,20 @@ func TestAction_EndGroup(t *testing.T) {
 func TestAction_SetEnv(t *testing.T) {
 	t.Parallel()
 
-	var b bytes.Buffer
-	a := NewWithWriter(&b)
-	a.SetEnv("key", "value")
+	checks := []struct {
+		key, value, want string
+	}{
+		{"key", "value", "::set-env name=key::value\n"},
+		{"key", "this is 100% a special\n\r value!", "::set-env name=key::this is 100%25 a special%0A%0D value!\n"},
+	}
 
-	if got, want := b.String(), "::set-env name=key::value\n"; got != want {
-		t.Errorf("expected %q to be %q", got, want)
+	for _, check := range checks {
+		var b bytes.Buffer
+		a := NewWithWriter(&b)
+		a.SetEnv(check.key, check.value)
+		if got, want := b.String(), check.want; got != want {
+			t.Errorf("SetEnv(%q, %q): expected %q; got %q", check.key, check.value, got, want)
+		}
 	}
 }
 
