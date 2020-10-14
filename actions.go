@@ -220,25 +220,14 @@ func (c *Action) WithFieldsSlice(f []string) *Action {
 		m[pair[0]] = pair[1]
 	}
 
-	return &Action{
-		w:      c.w,
-		fields: m,
-	}
+	return c.WithFieldsMap(m)
 }
 
 // WithFieldsMap includes the provided fields in log output. The fields in "m"
 // are automatically converted to k=v pairs and sorted.
 func (c *Action) WithFieldsMap(m map[string]string) *Action {
-	// Not changing the function signature to 'map[string]interface{}' or
-	// 'CommandProperties' to keep the API backwards-compatible. Perform a
-	// manual type coversion instead.
-	fields := make(CommandProperties)
-	for k, v := range m {
-		fields[k] = v
-	}
-
 	return &Action{
 		w:      c.w,
-		fields: fields,
+		fields: m,
 	}
 }

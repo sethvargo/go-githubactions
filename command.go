@@ -1,15 +1,19 @@
 package githubactions
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 )
 
-// CommandProperties is a named "map[string]interface{}" type to hold key-value
-// pairs passed to an actions command.
-type CommandProperties map[string]interface{}
+const (
+	cmdSeparator        = "::"
+	cmdPropertiesPrefix = " "
+)
+
+// CommandProperties is a named "map[string]string" type to hold key-value pairs
+// passed to an actions command.
+type CommandProperties map[string]string
 
 // String encodes the CommandProperties to a string as comma separated
 // 'key=value' pairs. The pairs are joined in a chronological order.
@@ -33,7 +37,7 @@ func (props *CommandProperties) String() string {
 //    ::set-env name=MY_VAR::some value
 type Command struct {
 	Name       string
-	Message    interface{}
+	Message    string
 	Properties CommandProperties
 }
 
@@ -46,42 +50,17 @@ func (cmd *Command) String() string {
 		cmd.Name = "missing.command"
 	}
 
-	const cmdSeparator = "::"
 	var builder strings.Builder
 	builder.WriteString(cmdSeparator)
 	builder.WriteString(cmd.Name)
 	if len(cmd.Properties) > 0 {
-		builder.WriteString(" ")
+		builder.WriteString(cmdPropertiesPrefix)
 		builder.WriteString(cmd.Properties.String())
 	}
 
 	builder.WriteString(cmdSeparator)
 	builder.WriteString(escapeData(cmd.Message))
 	return builder.String()
-}
-
-// toCommandValue sanitizes an input into a string so it can be passed with a
-// Command safely.
-//
-// The equivalent toolkit function can be found here:
-//
-// https://github.com/actions/toolkit/blob/9ad01e4fd30025e8858650d38e95cfe9193a3222/packages/core/src/command.ts#L83-L90
-func toCommandValue(i interface{}) string {
-	switch v := i.(type) {
-	case nil:
-		return ""
-	case string:
-		return v
-	case fmt.Stringer:
-		return v.String()
-	default:
-		data, err := json.Marshal(v)
-		if err != nil {
-			panic(err)
-		}
-
-		return string(data)
-	}
 }
 
 // escapeData escapes string values for presentation in the output of a command.
@@ -94,8 +73,7 @@ func toCommandValue(i interface{}) string {
 //
 // https://github.com/actions/toolkit/blob/9ad01e4fd30025e8858650d38e95cfe9193a3222/packages/core/src/command.ts#L92
 //
-func escapeData(i interface{}) string {
-	v := toCommandValue(i)
+func escapeData(v string) string {
 	v = strings.ReplaceAll(v, "%", "%25")
 	v = strings.ReplaceAll(v, "\r", "%0D")
 	v = strings.ReplaceAll(v, "\n", "%0A")
@@ -110,8 +88,7 @@ func escapeData(i interface{}) string {
 // The equivalent toolkit function can be found here:
 //
 // https://github.com/actions/toolkit/blob/1cc56db0ff126f4d65aeb83798852e02a2c180c3/packages/core/src/command.ts#L99-L106
-func escapeProperty(i interface{}) string {
-	v := toCommandValue(i)
+func escapeProperty(v string) string {
 	v = strings.ReplaceAll(v, "%", "%25")
 	v = strings.ReplaceAll(v, "\r", "%0D")
 	v = strings.ReplaceAll(v, "\n", "%0A")
