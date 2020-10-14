@@ -210,7 +210,7 @@ func (c *Action) Warningf(msg string, args ...interface{}) {
 // WithFieldsSlice includes the provided fields in log output. "f" must be a
 // slice of k=v pairs. The given slice will be sorted.
 func (c *Action) WithFieldsSlice(f []string) *Action {
-	m := make(CommandProperties, 0)
+	m := make(CommandProperties)
 	for _, s := range f {
 		pair := strings.SplitN(s, "=", 2)
 		if len(pair) < 2 {
@@ -232,7 +232,7 @@ func (c *Action) WithFieldsMap(m map[string]string) *Action {
 	// Not changing the function signature to 'map[string]interface{}' or
 	// 'CommandProperties' to keep the API backwards-compatible. Perform a
 	// manual type coversion instead.
-	fields := make(CommandProperties, 0)
+	fields := make(CommandProperties)
 	for k, v := range m {
 		fields[k] = v
 	}
