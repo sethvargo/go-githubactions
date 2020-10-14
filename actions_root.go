@@ -18,6 +18,11 @@ var (
 	defaultAction = New()
 )
 
+// IssueCommand issues an arbitrary GitHub actions Command.
+func IssueCommand(cmd *Command) {
+	defaultAction.IssueCommand(cmd)
+}
+
 // AddMask adds a new field mask for the given string "p". After called, future
 // attempts to log "p" will be replaced with "***" in log output.
 func AddMask(p string) {
