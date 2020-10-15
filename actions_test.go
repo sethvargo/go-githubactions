@@ -211,7 +211,7 @@ func TestAction_SetEnv(t *testing.T) {
 		a := NewWithWriter(&b)
 		a.SetEnv(check.key, check.value)
 		if got, want := b.String(), check.want; got != want {
-			t.Errorf("SetEnv(%q, %q): expected %q; got %q", check.key, check.value, got, want)
+			t.Errorf("SetEnv(%q, %q): expected %q; got %q", check.key, check.value, want, got)
 		}
 	}
 
