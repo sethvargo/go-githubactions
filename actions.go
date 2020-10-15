@@ -20,6 +20,7 @@ package githubactions
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -91,12 +92,7 @@ func (c *Action) IssueFileCommand(cmd *Command) error {
 	e = strings.ToUpper(e)
 	e = "GITHUB_" + e
 
-	w, err := os.OpenFile(os.Getenv(e), os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-	if err != nil {
-		return fmt.Errorf(errFileCmdFmt, err)
-	}
-
-	_, err = fmt.Fprintln(w, cmd.Message)
+	err := ioutil.WriteFile(os.Getenv(e), []byte(cmd.Message+"\n"), os.ModeAppend)
 	if err != nil {
 		return fmt.Errorf(errFileCmdFmt, err)
 	}
