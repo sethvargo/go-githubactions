@@ -21,26 +21,25 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strings"
 )
 
 const (
-	addMaskFmt   = "::add-mask::%s\n"
-	addPathFmt   = "::add-path::%s\n"
-	setEnvFmt    = "::set-env name=%s::%s\n"
-	setOutputFmt = "::set-output name=%s::%s\n"
-	saveStateFmt = "::save-state name=%s::%s\n"
+	addMaskCmd   = "add-mask"
+	addPathCmd   = "add-path"
+	setEnvCmd    = "set-env"
+	setOutputCmd = "set-output"
+	saveStateCmd = "save-state"
 
-	addMatcherFmt    = "::add-matcher::%s\n"
-	removeMatcherFmt = "::remove-matcher owner=%s::\n"
+	addMatcherCmd    = "add-matcher"
+	removeMatcherCmd = "remove-matcher"
 
-	groupFmt    = "::group::%s\n"
-	endGroupFmt = "::endgroup::\n"
+	groupCmd    = "group"
+	endGroupCmd = "endgroup"
 
-	debugFmt   = "::debug%s::%s\n"
-	errorFmt   = "::error%s::%s\n"
-	warningFmt = "::warning%s::%s\n"
+	debugCmd   = "debug"
+	errorCmd   = "error"
+	warningCmd = "warning"
 )
 
 // New creates a new wrapper with helpers for outputting information in GitHub
@@ -60,33 +59,63 @@ func NewWithWriter(w io.Writer) *Action {
 // strings.
 type Action struct {
 	w      io.Writer
-	fields string
+	fields CommandProperties
+}
+
+// IssueCommand issues a new GitHub actions Command.
+func (c *Action) IssueCommand(cmd *Command) {
+	fmt.Fprintln(c.w, cmd.String())
 }
 
 // AddMask adds a new field mask for the given string "p". After called, future
 // attempts to log "p" will be replaced with "***" in log output.
 func (c *Action) AddMask(p string) {
-	fmt.Fprintf(c.w, addMaskFmt, escapeData(p))
+	// ::add-mask::<p>
+	c.IssueCommand(&Command{
+		Name:    addMaskCmd,
+		Message: p,
+	})
 }
 
 // AddMatcher adds a new matcher with the given file path.
 func (c *Action) AddMatcher(p string) {
-	fmt.Fprintf(c.w, addMatcherFmt, escapeData(p))
+	// ::add-matcher::<p>
+	c.IssueCommand(&Command{
+		Name:    addMatcherCmd,
+		Message: p,
+	})
 }
 
 // RemoveMatcher removes a matcher with the given owner name.
 func (c *Action) RemoveMatcher(o string) {
-	fmt.Fprintf(c.w, removeMatcherFmt, o)
+	// ::remove-matcher owner=<o>::
+	c.IssueCommand(&Command{
+		Name: removeMatcherCmd,
+		Properties: CommandProperties{
+			"owner": o,
+		},
+	})
 }
 
 // AddPath adds the string "p" to the path for the invocation.
 func (c *Action) AddPath(p string) {
-	fmt.Fprintf(c.w, addPathFmt, escapeData(p))
+	// ::add-path::<p>
+	c.IssueCommand(&Command{
+		Name:    addPathCmd,
+		Message: p,
+	})
 }
 
 // SaveState saves state to be used in the "finally" post job entry point.
 func (c *Action) SaveState(k, v string) {
-	fmt.Fprintf(c.w, saveStateFmt, k, escapeData(v))
+	// ::save-state name=<k>::<v>
+	c.IssueCommand(&Command{
+		Name:    saveStateCmd,
+		Message: v,
+		Properties: CommandProperties{
+			"name": k,
+		},
+	})
 }
 
 // GetInput gets the input by the given name.
@@ -99,51 +128,65 @@ func (c *Action) GetInput(i string) string {
 
 // Group starts a new collapsable region up to the next ungroup invocation.
 func (c *Action) Group(t string) {
-	fmt.Fprintf(c.w, groupFmt, escapeData(t))
+	// ::group::<t>
+	c.IssueCommand(&Command{
+		Name:    groupCmd,
+		Message: t,
+	})
 }
 
 // EndGroup ends the current group.
 func (c *Action) EndGroup() {
-	fmt.Fprint(c.w, endGroupFmt)
+	// ::endgroup::
+	c.IssueCommand(&Command{
+		Name: endGroupCmd,
+	})
 }
 
 // SetEnv sets an environment variable.
 func (c *Action) SetEnv(k, v string) {
-	fmt.Fprintf(c.w, setEnvFmt, k, escapeData(v))
+	// ::set-env name=<k>::<v>
+	c.IssueCommand(&Command{
+		Name:    setEnvCmd,
+		Message: v,
+		Properties: CommandProperties{
+			"name": k,
+		},
+	})
 }
 
 // SetOutput sets an output parameter.
 func (c *Action) SetOutput(k, v string) {
-	fmt.Fprintf(c.w, setOutputFmt, k, escapeData(v))
-}
-
-// escapeData escapes string values for presentation in the output of a
-// command. This is a not-so-well-documented requirement of commands that
-// define a message:
-//
-// https://github.com/actions/toolkit/blob/9ad01e4fd30025e8858650d38e95cfe9193a3222/packages/core/src/command.ts#L74
-//
-// The equivalent toolkit function can be found here:
-//
-// https://github.com/actions/toolkit/blob/9ad01e4fd30025e8858650d38e95cfe9193a3222/packages/core/src/command.ts#L92
-//
-func escapeData(v string) string {
-	v = strings.ReplaceAll(v, "%", "%25")
-	v = strings.ReplaceAll(v, "\r", "%0D")
-	v = strings.ReplaceAll(v, "\n", "%0A")
-	return v
+	// ::set-output name=<k>::<v>
+	c.IssueCommand(&Command{
+		Name:    setOutputCmd,
+		Message: v,
+		Properties: CommandProperties{
+			"name": k,
+		},
+	})
 }
 
 // Debugf prints a debug-level message. The arguments follow the standard Printf
 // arguments.
 func (c *Action) Debugf(msg string, args ...interface{}) {
-	fmt.Fprintf(c.w, debugFmt, c.fields, fmt.Sprintf(msg, args...))
+	// ::debug <c.fields>::<msg, args>
+	c.IssueCommand(&Command{
+		Name:       debugCmd,
+		Message:    fmt.Sprintf(msg, args...),
+		Properties: c.fields,
+	})
 }
 
 // Errorf prints a error-level message. The arguments follow the standard Printf
 // arguments.
 func (c *Action) Errorf(msg string, args ...interface{}) {
-	fmt.Fprintf(c.w, errorFmt, c.fields, fmt.Sprintf(msg, args...))
+	// ::error <c.fields>::<msg, args>
+	c.IssueCommand(&Command{
+		Name:       errorCmd,
+		Message:    fmt.Sprintf(msg, args...),
+		Properties: c.fields,
+	})
 }
 
 // Fatalf prints a error-level message and exits. This is equivalent to Errorf
@@ -156,25 +199,35 @@ func (c *Action) Fatalf(msg string, args ...interface{}) {
 // Warningf prints a warning-level message. The arguments follow the standard
 // Printf arguments.
 func (c *Action) Warningf(msg string, args ...interface{}) {
-	fmt.Fprintf(c.w, warningFmt, c.fields, fmt.Sprintf(msg, args...))
+	// ::warning <c.fields>::<msg, args>
+	c.IssueCommand(&Command{
+		Name:       warningCmd,
+		Message:    fmt.Sprintf(msg, args...),
+		Properties: c.fields,
+	})
 }
 
 // WithFieldsSlice includes the provided fields in log output. "f" must be a
 // slice of k=v pairs. The given slice will be sorted.
 func (c *Action) WithFieldsSlice(f []string) *Action {
-	sort.Strings(f)
-	return &Action{
-		w:      c.w,
-		fields: " " + strings.Join(f, ","),
+	m := make(CommandProperties)
+	for _, s := range f {
+		pair := strings.SplitN(s, "=", 2)
+		if len(pair) < 2 {
+			panic(fmt.Sprintf("%q is not a proper k=v pair!", s))
+		}
+
+		m[pair[0]] = pair[1]
 	}
+
+	return c.WithFieldsMap(m)
 }
 
 // WithFieldsMap includes the provided fields in log output. The fields in "m"
 // are automatically converted to k=v pairs and sorted.
 func (c *Action) WithFieldsMap(m map[string]string) *Action {
-	l := make([]string, 0, len(m))
-	for k, v := range m {
-		l = append(l, fmt.Sprintf("%s=%s", k, v))
+	return &Action{
+		w:      c.w,
+		fields: m,
 	}
-	return c.WithFieldsSlice(l)
 }
