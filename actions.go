@@ -259,7 +259,8 @@ func (c *Action) Warningf(msg string, args ...interface{}) {
 }
 
 // WithFieldsSlice includes the provided fields in log output. "f" must be a
-// slice of k=v pairs. The given slice will be sorted.
+// slice of k=v pairs. The given slice will be sorted. It panics if any of the
+// string in the given slice does not construct a valid 'key=value' pair.
 func (c *Action) WithFieldsSlice(f []string) *Action {
 	m := make(CommandProperties)
 	for _, s := range f {
