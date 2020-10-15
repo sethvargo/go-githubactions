@@ -130,7 +130,14 @@ func (c *Action) RemoveMatcher(o string) {
 	})
 }
 
-// AddPath adds the string "p" to the path for the invocation.
+// AddPath adds the string "p" to the path for the invocation. It attempts to
+// issue a file command at first. If that fails, it falls back to the regular
+// (now deprecated) 'add-path' command, which may stop working in the future.
+// The deprecated fallback may be useful for users running an older version of
+// GitHub runner.
+//
+// https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#adding-a-system-path
+// https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) AddPath(p string) {
 	err := c.IssueFileCommand(&Command{
 		Name:    pathCmd,
@@ -183,7 +190,13 @@ func (c *Action) EndGroup() {
 	})
 }
 
-// SetEnv sets an environment variable.
+// SetEnv sets an environment variable. It attempts to issue a file command at
+// first. If that fails, it falls back to the regular (now deprecated) 'set-env'
+// command, which may stop working in the future. The deprecated fallback may be
+// useful for users running an older version of GitHub runner.
+//
+// https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
+// https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) SetEnv(k, v string) {
 	err := c.IssueFileCommand(&Command{
 		Name:    envCmd,
