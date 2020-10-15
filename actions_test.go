@@ -116,10 +116,14 @@ func TestAction_RemoveMatcher(t *testing.T) {
 func TestAction_AddPath(t *testing.T) {
 	t.Parallel()
 
+	const envGitHubPath = "GITHUB_PATH"
+	defer os.Setenv(envGitHubPath, os.Getenv(envGitHubPath))
+	os.Unsetenv(envGitHubPath)
+
+	// expect a regular command to be issued when env file is not set.
 	var b bytes.Buffer
 	a := NewWithWriter(&b)
 
-	// expect a regular command to be issued when env file is not set.
 	a.AddPath("/custom/bin")
 	if got, want := b.String(), "::add-path::/custom/bin\n"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
@@ -132,8 +136,8 @@ func TestAction_AddPath(t *testing.T) {
 	}
 
 	defer os.Remove(file.Name())
-	if err = os.Setenv("GITHUB_PATH", file.Name()); err != nil {
-		t.Fatalf("unable to set 'GITHUB_PATH' env var: %s", err)
+	if err = os.Setenv(envGitHubPath, file.Name()); err != nil {
+		t.Fatalf("unable to set %q env var: %s", envGitHubPath, err)
 	}
 
 	b.Reset()
@@ -198,6 +202,10 @@ func TestAction_EndGroup(t *testing.T) {
 func TestAction_SetEnv(t *testing.T) {
 	t.Parallel()
 
+	const envGitHubEnv = "GITHUB_ENV"
+	defer os.Setenv(envGitHubEnv, os.Getenv(envGitHubEnv))
+	os.Unsetenv(envGitHubEnv)
+
 	// expectations for regular set-env commands
 	checks := []struct {
 		key, value, want string
@@ -224,8 +232,8 @@ func TestAction_SetEnv(t *testing.T) {
 	}
 
 	defer os.Remove(file.Name())
-	if err = os.Setenv("GITHUB_ENV", file.Name()); err != nil {
-		t.Fatalf("unable to set 'GITHUB_ENV' env var: %s", err)
+	if err = os.Setenv(envGitHubEnv, file.Name()); err != nil {
+		t.Fatalf("unable to set %q env var: %s", envGitHubEnv, err)
 	}
 
 	a.SetEnv("key", "value")
