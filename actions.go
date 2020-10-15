@@ -26,10 +26,16 @@ import (
 
 const (
 	addMaskCmd   = "add-mask"
-	addPathCmd   = "add-path"
-	setEnvCmd    = "set-env"
 	setOutputCmd = "set-output"
 	saveStateCmd = "save-state"
+
+	addPathCmd = "add-path" // used when issuing the regular command
+	pathCmd    = "path"     // used when issuing the file command
+
+	setEnvCmd       = "set-env"        // used when issuing the regular command
+	envCmd          = "env"            // used when issuing the file command
+	envCmdMsgFmt    = "%s<<%s\n%s\n%s" // ${name}<<${delimiter}${os.EOL}${convertedVal}${os.EOL}${delimiter}
+	envCmdDelimiter = "_GitHubActionsFileCommandDelimeter_"
 
 	addMatcherCmd    = "add-matcher"
 	removeMatcherCmd = "remove-matcher"
@@ -40,6 +46,8 @@ const (
 	debugCmd   = "debug"
 	errorCmd   = "error"
 	warningCmd = "warning"
+
+	errFileCmdFmt = "unable to write command to the environment file: %s"
 )
 
 // New creates a new wrapper with helpers for outputting information in GitHub
@@ -65,6 +73,35 @@ type Action struct {
 // IssueCommand issues a new GitHub actions Command.
 func (c *Action) IssueCommand(cmd *Command) {
 	fmt.Fprintln(c.w, cmd.String())
+}
+
+// IssueFileCommand issues a new GitHub actions Command using environment files.
+//
+// https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#environment-files
+//
+// The TypeScript equivalent function:
+//
+// https://github.com/actions/toolkit/blob/4f7fb6513a355689f69f0849edeb369a4dc81729/packages/core/src/file-command.ts#L10-L23
+//
+// IssueFileCommand currently ignores the 'CommandProperties' field provided
+// with the 'Command' argument as it's scope is unclear in the current
+// TypeScript implementation.
+func (c *Action) IssueFileCommand(cmd *Command) error {
+	e := strings.ReplaceAll(cmd.Name, "-", "_")
+	e = strings.ToUpper(e)
+	e = "GITHUB_" + e
+
+	w, err := os.OpenFile(os.Getenv(e), os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	if err != nil {
+		return fmt.Errorf(errFileCmdFmt, err)
+	}
+
+	_, err = fmt.Fprintln(w, cmd.Message)
+	if err != nil {
+		return fmt.Errorf(errFileCmdFmt, err)
+	}
+
+	return nil
 }
 
 // AddMask adds a new field mask for the given string "p". After called, future
@@ -99,11 +136,18 @@ func (c *Action) RemoveMatcher(o string) {
 
 // AddPath adds the string "p" to the path for the invocation.
 func (c *Action) AddPath(p string) {
-	// ::add-path::<p>
-	c.IssueCommand(&Command{
-		Name:    addPathCmd,
+	err := c.IssueFileCommand(&Command{
+		Name:    pathCmd,
 		Message: p,
 	})
+
+	if err != nil { // use regular command as fallback
+		// ::add-path::<p>
+		c.IssueCommand(&Command{
+			Name:    addPathCmd,
+			Message: p,
+		})
+	}
 }
 
 // SaveState saves state to be used in the "finally" post job entry point.
@@ -145,14 +189,21 @@ func (c *Action) EndGroup() {
 
 // SetEnv sets an environment variable.
 func (c *Action) SetEnv(k, v string) {
-	// ::set-env name=<k>::<v>
-	c.IssueCommand(&Command{
-		Name:    setEnvCmd,
-		Message: v,
-		Properties: CommandProperties{
-			"name": k,
-		},
+	err := c.IssueFileCommand(&Command{
+		Name:    envCmd,
+		Message: fmt.Sprintf(envCmdMsgFmt, k, envCmdDelimiter, v, envCmdDelimiter),
 	})
+
+	if err != nil { // use regular command as fallback
+		// ::set-env name=<k>::<v>
+		c.IssueCommand(&Command{
+			Name:    setEnvCmd,
+			Message: v,
+			Properties: CommandProperties{
+				"name": k,
+			},
+		})
+	}
 }
 
 // SetOutput sets an output parameter.

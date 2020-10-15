@@ -16,6 +16,8 @@ package githubactions
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -30,6 +32,47 @@ func TestAction_IssueCommand(t *testing.T) {
 	})
 
 	if got, want := b.String(), "::foo::bar\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+func TestAction_IssueFileCommand(t *testing.T) {
+	t.Parallel()
+
+	file, err := ioutil.TempFile(".", ".issue_file_cmd_test_")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+
+	defer os.Remove(file.Name())
+	if err = os.Setenv("GITHUB_FOO", file.Name()); err != nil {
+		t.Fatalf("unable to set 'GITHUB_FOO' env var: %s", err)
+	}
+
+	var b bytes.Buffer
+	a := NewWithWriter(&b)
+
+	err = a.IssueFileCommand(&Command{
+		Name:    "foo",
+		Message: "bar",
+	})
+
+	if err != nil {
+		t.Errorf("expected nil error, got: %s", err)
+	}
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the message to be written to the env file
+	data, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		t.Errorf("unable to read temp env file: %s", err)
+	}
+
+	if got, want := string(data), "bar\n"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -75,9 +118,43 @@ func TestAction_AddPath(t *testing.T) {
 
 	var b bytes.Buffer
 	a := NewWithWriter(&b)
+
+	// expect a regular command to be issued when env file is not set.
+	a.AddPath("/custom/bin")
+	if got, want := b.String(), "::add-path::/custom/bin\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect a file command to be issued when env file is set.
+	file, err := ioutil.TempFile(".", ".add_path_test_")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+
+	defer os.Remove(file.Name())
+	if err = os.Setenv("GITHUB_PATH", file.Name()); err != nil {
+		t.Fatalf("unable to set 'GITHUB_PATH' env var: %s", err)
+	}
+
+	b.Reset()
 	a.AddPath("/custom/bin")
 
-	if got, want := b.String(), "::add-path::/custom/bin\n"; got != want {
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the message to be written to the file.
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		t.Errorf("unable to read temp env file: %s", err)
+	}
+
+	if got, want := string(data), "/custom/bin\n"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -121,6 +198,7 @@ func TestAction_EndGroup(t *testing.T) {
 func TestAction_SetEnv(t *testing.T) {
 	t.Parallel()
 
+	// expectations for regular set-env commands
 	checks := []struct {
 		key, value, want string
 	}{
@@ -135,6 +213,37 @@ func TestAction_SetEnv(t *testing.T) {
 		if got, want := b.String(), check.want; got != want {
 			t.Errorf("SetEnv(%q, %q): expected %q; got %q", check.key, check.value, got, want)
 		}
+	}
+
+	// expectations for env file env commands
+	var b bytes.Buffer
+	a := NewWithWriter(&b)
+	file, err := ioutil.TempFile(".", ".set_env_test_")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+
+	defer os.Remove(file.Name())
+	if err = os.Setenv("GITHUB_ENV", file.Name()); err != nil {
+		t.Fatalf("unable to set 'GITHUB_ENV' env var: %s", err)
+	}
+
+	a.SetEnv("key", "value")
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the command to be written to the file.
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		t.Errorf("unable to read temp env file: %s", err)
+	}
+
+	want := "key<<_GitHubActionsFileCommandDelimeter_\nvalue\n_GitHubActionsFileCommandDelimeter_\n"
+	if got := string(data); got != want {
+		t.Errorf("expected %q to be %q", got, want)
 	}
 }
 
