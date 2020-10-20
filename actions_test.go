@@ -16,6 +16,8 @@ package githubactions
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
@@ -30,6 +32,45 @@ func TestAction_IssueCommand(t *testing.T) {
 	})
 
 	if got, want := b.String(), "::foo::bar\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+func TestAction_IssueFileCommand(t *testing.T) {
+	t.Parallel()
+
+	file, err := ioutil.TempFile(".", ".issue_file_cmd_test_")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+
+	defer os.Remove(file.Name())
+
+	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_FOO", file.Name())
+	var b bytes.Buffer
+	a := NewWithWriter(&b)
+
+	err = a.issueFileCommand(&Command{
+		Name:    "foo",
+		Message: "bar",
+	}, fakeGetenvFunc)
+
+	if err != nil {
+		t.Errorf("expected nil error, got: %s", err)
+	}
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the message to be written to the env file
+	data, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		t.Errorf("unable to read temp env file: %s", err)
+	}
+
+	if got, want := string(data), "bar\n"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -73,11 +114,47 @@ func TestAction_RemoveMatcher(t *testing.T) {
 func TestAction_AddPath(t *testing.T) {
 	t.Parallel()
 
+	const envGitHubPath = "GITHUB_PATH"
+
+	// expect a regular command to be issued when env file is not set.
+	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubPath, "")
 	var b bytes.Buffer
 	a := NewWithWriter(&b)
-	a.AddPath("/custom/bin")
 
+	a.addPath("/custom/bin", fakeGetenvFunc)
 	if got, want := b.String(), "::add-path::/custom/bin\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	b.Reset()
+
+	// expect a file command to be issued when env file is set.
+	file, err := ioutil.TempFile(".", ".add_path_test_")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+
+	defer os.Remove(file.Name())
+	fakeGetenvFunc = newFakeGetenvFunc(t, envGitHubPath, file.Name())
+
+	a.addPath("/custom/bin", fakeGetenvFunc)
+
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the message to be written to the file.
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		t.Errorf("unable to read temp env file: %s", err)
+	}
+
+	if got, want := string(data), "/custom/bin\n"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -90,6 +167,18 @@ func TestAction_SaveState(t *testing.T) {
 	a.SaveState("key", "value")
 
 	if got, want := b.String(), "::save-state name=key::value\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+func TestAction_GetInput(t *testing.T) {
+	t.Parallel()
+
+	fakeGetenvFunc := newFakeGetenvFunc(t, "INPUT_FOO", "bar")
+
+	var b bytes.Buffer
+	a := NewWithWriter(&b)
+	if got, want := a.getInput("foo", fakeGetenvFunc), "bar"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -121,6 +210,9 @@ func TestAction_EndGroup(t *testing.T) {
 func TestAction_SetEnv(t *testing.T) {
 	t.Parallel()
 
+	const envGitHubEnv = "GITHUB_ENV"
+
+	// expectations for regular set-env commands
 	checks := []struct {
 		key, value, want string
 	}{
@@ -129,12 +221,42 @@ func TestAction_SetEnv(t *testing.T) {
 	}
 
 	for _, check := range checks {
+		fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubEnv, "")
 		var b bytes.Buffer
 		a := NewWithWriter(&b)
-		a.SetEnv(check.key, check.value)
+		a.setEnv(check.key, check.value, fakeGetenvFunc)
 		if got, want := b.String(), check.want; got != want {
-			t.Errorf("SetEnv(%q, %q): expected %q; got %q", check.key, check.value, got, want)
+			t.Errorf("SetEnv(%q, %q): expected %q; got %q", check.key, check.value, want, got)
 		}
+	}
+
+	// expectations for env file env commands
+	var b bytes.Buffer
+	a := NewWithWriter(&b)
+	file, err := ioutil.TempFile(".", ".set_env_test_")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+
+	defer os.Remove(file.Name())
+	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubEnv, file.Name())
+
+	a.setEnv("key", "value", fakeGetenvFunc)
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the command to be written to the file.
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		t.Errorf("unable to read temp env file: %s", err)
+	}
+
+	want := "key<<_GitHubActionsFileCommandDelimeter_\nvalue\n_GitHubActionsFileCommandDelimeter_\n"
+	if got := string(data); got != want {
+		t.Errorf("expected %q to be %q", got, want)
 	}
 }
 
@@ -209,5 +331,18 @@ func TestAction_WithFieldsMap(t *testing.T) {
 
 	if got, want := b.String(), "::debug file=app.js,line=100::fail: thing\n"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+// newFakeGetenvFunc returns a new getenvFunc that is expected to be called with
+// the provided key. It returns the provided value if the call matches the
+// provided key. It reports an error on test t otherwise.
+func newFakeGetenvFunc(t *testing.T, wantKey, v string) getenvFunc {
+	return func(gotKey string) string {
+		if gotKey != wantKey {
+			t.Errorf("expected call GetenvFunc(%q) to be GetenvFunc(%q)", gotKey, wantKey)
+		}
+
+		return v
 	}
 }
