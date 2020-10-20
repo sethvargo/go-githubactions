@@ -88,11 +88,15 @@ func (c *Action) IssueCommand(cmd *Command) {
 // with the 'Command' argument as it's scope is unclear in the current
 // TypeScript implementation.
 func (c *Action) IssueFileCommand(cmd *Command) error {
+	return c.issueFileCommand(cmd, os.Getenv)
+}
+
+func (c *Action) issueFileCommand(cmd *Command, f getenvFunc) error {
 	e := strings.ReplaceAll(cmd.Name, "-", "_")
 	e = strings.ToUpper(e)
 	e = "GITHUB_" + e
 
-	err := ioutil.WriteFile(os.Getenv(e), []byte(cmd.Message+"\n"), os.ModeAppend)
+	err := ioutil.WriteFile(f(e), []byte(cmd.Message+"\n"), os.ModeAppend)
 	if err != nil {
 		return fmt.Errorf(errFileCmdFmt, err)
 	}
@@ -139,10 +143,14 @@ func (c *Action) RemoveMatcher(o string) {
 // https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#adding-a-system-path
 // https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) AddPath(p string) {
-	err := c.IssueFileCommand(&Command{
+	c.addPath(p, os.Getenv)
+}
+
+func (c *Action) addPath(p string, f getenvFunc) {
+	err := c.issueFileCommand(&Command{
 		Name:    pathCmd,
 		Message: p,
-	})
+	}, f)
 
 	if err != nil { // use regular command as fallback
 		// ::add-path::<p>
@@ -167,10 +175,14 @@ func (c *Action) SaveState(k, v string) {
 
 // GetInput gets the input by the given name.
 func (c *Action) GetInput(i string) string {
+	return c.getInput(i, os.Getenv)
+}
+
+func (c *Action) getInput(i string, f getenvFunc) string {
 	e := strings.ReplaceAll(i, " ", "_")
 	e = strings.ToUpper(e)
 	e = "INPUT_" + e
-	return strings.TrimSpace(os.Getenv(e))
+	return strings.TrimSpace(f(e))
 }
 
 // Group starts a new collapsable region up to the next ungroup invocation.
@@ -198,10 +210,14 @@ func (c *Action) EndGroup() {
 // https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
 // https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) SetEnv(k, v string) {
-	err := c.IssueFileCommand(&Command{
+	c.setEnv(k, v, os.Getenv)
+}
+
+func (c *Action) setEnv(k, v string, f getenvFunc) {
+	err := c.issueFileCommand(&Command{
 		Name:    envCmd,
 		Message: fmt.Sprintf(envCmdMsgFmt, k, envCmdDelimiter, v, envCmdDelimiter),
-	})
+	}, f)
 
 	if err != nil { // use regular command as fallback
 		// ::set-env name=<k>::<v>
@@ -292,3 +308,7 @@ func (c *Action) WithFieldsMap(m map[string]string) *Action {
 		fields: m,
 	}
 }
+
+// getenvFunc is an abstraction to make tests feasible for commands that
+// interact with environment variables.
+type getenvFunc func(k string) string
