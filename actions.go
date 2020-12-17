@@ -272,6 +272,13 @@ func (c *Action) Fatalf(msg string, args ...interface{}) {
 	os.Exit(1)
 }
 
+// Infof prints a info-level message. The arguments follow the standard Printf
+// arguments.
+func (c *Action) Infof(msg string, args ...interface{}) {
+	// ::info <c.fields>::<msg, args>
+	fmt.Fprintln(c.w, msg, args)
+}
+
 // Warningf prints a warning-level message. The arguments follow the standard
 // Printf arguments.
 func (c *Action) Warningf(msg string, args ...interface{}) {
