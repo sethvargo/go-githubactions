@@ -276,7 +276,7 @@ func (c *Action) Fatalf(msg string, args ...interface{}) {
 // arguments.
 func (c *Action) Infof(msg string, args ...interface{}) {
 	// ::info <c.fields>::<msg, args>
-	fmt.Fprintln(c.w, msg, args)
+	fmt.Fprintf(c.w, msg, args...)
 }
 
 // Warningf prints a warning-level message. The arguments follow the standard
