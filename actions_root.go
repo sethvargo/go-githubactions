@@ -97,6 +97,12 @@ func Fatalf(msg string, args ...interface{}) {
 	defaultAction.Fatalf(msg, args...)
 }
 
+// Infof prints a info-level message. The arguments follow the standard Printf
+// arguments.
+func Infof(msg string, args ...interface{}) {
+	defaultAction.Infof(msg, args...)
+}
+
 // Warningf prints a warning-level message. The arguments follow the standard
 // Printf arguments.
 func Warningf(msg string, args ...interface{}) {
