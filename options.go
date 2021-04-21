@@ -43,7 +43,7 @@ func WithFields(fields CommandProperties) Option {
 
 // WithGetenv sets the `Getenv` function on an Action. By default, this will
 // be `os.Getenv` from the standard library.
-func WithGetenv(getenv getenvFunc) Option {
+func WithGetenv(getenv GetenvFunc) Option {
 	return func(a *Action) *Action {
 		a.getenv = getenv
 		return a

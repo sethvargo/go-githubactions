@@ -78,7 +78,7 @@ func NewWithWriter(w io.Writer) *Action {
 type Action struct {
 	w      io.Writer
 	fields CommandProperties
-	getenv getenvFunc
+	getenv GetenvFunc
 }
 
 // IssueCommand issues a new GitHub actions Command.
@@ -310,6 +310,6 @@ func (c *Action) WithFieldsMap(m map[string]string) *Action {
 	}
 }
 
-// getenvFunc is an abstraction to make tests feasible for commands that
+// GetenvFunc is an abstraction to make tests feasible for commands that
 // interact with environment variables.
-type getenvFunc func(k string) string
+type GetenvFunc func(k string) string

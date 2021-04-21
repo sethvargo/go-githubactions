@@ -362,10 +362,10 @@ func TestAction_WithFieldsMap(t *testing.T) {
 	}
 }
 
-// newFakeGetenvFunc returns a new getenvFunc that is expected to be called with
+// newFakeGetenvFunc returns a new GetenvFunc that is expected to be called with
 // the provided key. It returns the provided value if the call matches the
 // provided key. It reports an error on test t otherwise.
-func newFakeGetenvFunc(t *testing.T, wantKey, v string) getenvFunc {
+func newFakeGetenvFunc(t *testing.T, wantKey, v string) GetenvFunc {
 	return func(gotKey string) string {
 		if gotKey != wantKey {
 			t.Errorf("expected call GetenvFunc(%q) to be GetenvFunc(%q)", gotKey, wantKey)
