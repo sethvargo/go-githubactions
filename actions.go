@@ -54,7 +54,7 @@ const (
 // New creates a new wrapper with helpers for outputting information in GitHub
 // actions format.
 func New(opts ...Option) *Action {
-	a := &Action{w: os.Stdout}
+	a := &Action{w: os.Stdout, getenv: os.Getenv}
 	for _, opt := range opts {
 		opt(a)
 	}
