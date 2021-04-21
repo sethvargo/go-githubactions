@@ -178,8 +178,8 @@ func TestAction_GetInput(t *testing.T) {
 	fakeGetenvFunc := newFakeGetenvFunc(t, "INPUT_FOO", "bar")
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
-	if got, want := a.getInput("foo", fakeGetenvFunc), "bar"; got != want {
+	a := New(OptWriter(&b), OptGetenv(fakeGetenvFunc))
+	if got, want := a.GetInput("foo"), "bar"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }

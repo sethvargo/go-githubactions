@@ -176,14 +176,10 @@ func (c *Action) SaveState(k, v string) {
 
 // GetInput gets the input by the given name.
 func (c *Action) GetInput(i string) string {
-	return c.getInput(i, c.getenv)
-}
-
-func (c *Action) getInput(i string, f getenvFunc) string {
 	e := strings.ReplaceAll(i, " ", "_")
 	e = strings.ToUpper(e)
 	e = "INPUT_" + e
-	return strings.TrimSpace(f(e))
+	return strings.TrimSpace(c.getenv(e))
 }
 
 // Group starts a new collapsable region up to the next ungroup invocation.
