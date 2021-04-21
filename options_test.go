@@ -55,3 +55,17 @@ func TestOptFields(t *testing.T) {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
+
+func TestOptGetenv(t *testing.T) {
+	t.Parallel()
+
+	a := &Action{}
+	opt := OptGetenv(func(k string) string {
+		return "sentinel"
+	})
+
+	opt(a)
+	if got, want := a.getenv("any"), "sentinel"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}

@@ -73,6 +73,7 @@ func NewWithWriter(w io.Writer) *Action {
 type Action struct {
 	w      io.Writer
 	fields CommandProperties
+	getenv getenvFunc
 }
 
 // IssueCommand issues a new GitHub actions Command.

@@ -35,3 +35,11 @@ func OptFields(fields CommandProperties) Option {
 		a.fields = fields
 	}
 }
+
+// OptGetenv sets the `Getenv` function on an Action. By default, this will
+// be `os.Getenv` from the standard library.
+func OptGetenv(getenv getenvFunc) Option {
+	return func(a *Action) {
+		a.getenv = getenv
+	}
+}
