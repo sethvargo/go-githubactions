@@ -24,12 +24,15 @@ import (
 // Option is a modifier for an Action
 type Option func(*Action)
 
+// OptWriter sets the writer function on an Action. By default, this will
+// be `os.Stdout` from the standard library.
 func OptWriter(w io.Writer) Option {
 	return func(a *Action) {
 		a.w = w
 	}
 }
 
+// OptFields sets the extra command field on an Action.
 func OptFields(fields CommandProperties) Option {
 	return func(a *Action) {
 		a.fields = fields
