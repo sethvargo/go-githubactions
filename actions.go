@@ -93,7 +93,7 @@ func (c *Action) IssueCommand(cmd *Command) {
 // with the 'Command' argument as it's scope is unclear in the current
 // TypeScript implementation.
 func (c *Action) IssueFileCommand(cmd *Command) error {
-	return c.issueFileCommand(cmd, os.Getenv)
+	return c.issueFileCommand(cmd, c.getenv)
 }
 
 func (c *Action) issueFileCommand(cmd *Command, f getenvFunc) error {
@@ -148,7 +148,7 @@ func (c *Action) RemoveMatcher(o string) {
 // https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#adding-a-system-path
 // https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) AddPath(p string) {
-	c.addPath(p, os.Getenv)
+	c.addPath(p, c.getenv)
 }
 
 func (c *Action) addPath(p string, f getenvFunc) {
@@ -180,7 +180,7 @@ func (c *Action) SaveState(k, v string) {
 
 // GetInput gets the input by the given name.
 func (c *Action) GetInput(i string) string {
-	return c.getInput(i, os.Getenv)
+	return c.getInput(i, c.getenv)
 }
 
 func (c *Action) getInput(i string, f getenvFunc) string {
@@ -215,7 +215,7 @@ func (c *Action) EndGroup() {
 // https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
 // https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) SetEnv(k, v string) {
-	c.setEnv(k, v, os.Getenv)
+	c.setEnv(k, v, c.getenv)
 }
 
 func (c *Action) setEnv(k, v string, f getenvFunc) {
