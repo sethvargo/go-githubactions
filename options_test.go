@@ -19,12 +19,12 @@ import (
 	"testing"
 )
 
-func TestOptWriter(t *testing.T) {
+func TestWithWriter(t *testing.T) {
 	t.Parallel()
 
 	a := &Action{}
 	var b bytes.Buffer
-	opt := OptWriter(&b)
+	opt := WithWriter(&b)
 
 	opt(a)
 	a.IssueCommand(&Command{
@@ -37,12 +37,12 @@ func TestOptWriter(t *testing.T) {
 	}
 }
 
-func TestOptFields(t *testing.T) {
+func TestWithFields(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
 	a := &Action{w: &b}
-	opt := OptFields(map[string]string{"baz": "quux"})
+	opt := WithFields(map[string]string{"baz": "quux"})
 
 	opt(a)
 	a.IssueCommand(&Command{
@@ -56,11 +56,11 @@ func TestOptFields(t *testing.T) {
 	}
 }
 
-func TestOptGetenv(t *testing.T) {
+func TestWithGetenv(t *testing.T) {
 	t.Parallel()
 
 	a := &Action{}
-	opt := OptGetenv(func(k string) string {
+	opt := WithGetenv(func(k string) string {
 		return "sentinel"
 	})
 

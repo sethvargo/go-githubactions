@@ -68,9 +68,9 @@ func New(opts ...Option) *Action {
 // tests. The given writer cannot add any prefixes to the string, since GitHub
 // requires these special strings to match a very particular format.
 //
-// Deprecated: Use New() with OptWriter instead.
+// Deprecated: Use New() with WithWriter instead.
 func NewWithWriter(w io.Writer) *Action {
-	return New(OptWriter(w))
+	return New(WithWriter(w))
 }
 
 // Action is an internal wrapper around GitHub Actions' output and magic
