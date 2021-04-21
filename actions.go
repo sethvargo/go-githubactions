@@ -67,6 +67,8 @@ func New(opts ...Option) *Action {
 // NewWithWriter creates a wrapper using the given writer. This is useful for
 // tests. The given writer cannot add any prefixes to the string, since GitHub
 // requires these special strings to match a very particular format.
+//
+// Deprecated: Use New() with OptWriter instead.
 func NewWithWriter(w io.Writer) *Action {
 	return New(OptWriter(w))
 }
