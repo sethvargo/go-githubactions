@@ -53,15 +53,19 @@ const (
 
 // New creates a new wrapper with helpers for outputting information in GitHub
 // actions format.
-func New() *Action {
-	return &Action{w: os.Stdout}
+func New(opts ...Option) *Action {
+	a := &Action{w: os.Stdout}
+	for _, opt := range opts {
+		opt(a)
+	}
+	return a
 }
 
 // NewWithWriter creates a wrapper using the given writer. This is useful for
 // tests. The given writer cannot add any prefixes to the string, since GitHub
 // requires these special strings to match a very particular format.
 func NewWithWriter(w io.Writer) *Action {
-	return &Action{w: w}
+	return New(OptWriter(w))
 }
 
 // Action is an internal wrapper around GitHub Actions' output and magic
