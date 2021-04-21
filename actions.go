@@ -148,14 +148,10 @@ func (c *Action) RemoveMatcher(o string) {
 // https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#adding-a-system-path
 // https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) AddPath(p string) {
-	c.addPath(p, c.getenv)
-}
-
-func (c *Action) addPath(p string, f getenvFunc) {
-	err := c.issueFileCommand(&Command{
+	err := c.IssueFileCommand(&Command{
 		Name:    pathCmd,
 		Message: p,
-	}, f)
+	})
 
 	if err != nil { // use regular command as fallback
 		// ::add-path::<p>

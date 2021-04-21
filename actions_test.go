@@ -119,9 +119,9 @@ func TestAction_AddPath(t *testing.T) {
 	// expect a regular command to be issued when env file is not set.
 	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubPath, "")
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b), OptGetenv(fakeGetenvFunc))
 
-	a.addPath("/custom/bin", fakeGetenvFunc)
+	a.AddPath("/custom/bin")
 	if got, want := b.String(), "::add-path::/custom/bin\n"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
@@ -136,8 +136,9 @@ func TestAction_AddPath(t *testing.T) {
 
 	defer os.Remove(file.Name())
 	fakeGetenvFunc = newFakeGetenvFunc(t, envGitHubPath, file.Name())
+	OptGetenv(fakeGetenvFunc)(a)
 
-	a.addPath("/custom/bin", fakeGetenvFunc)
+	a.AddPath("/custom/bin")
 
 	if got, want := b.String(), ""; got != want {
 		t.Errorf("expected %q to be %q", got, want)
