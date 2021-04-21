@@ -56,6 +56,9 @@ const (
 func New(opts ...Option) *Action {
 	a := &Action{w: os.Stdout, getenv: os.Getenv}
 	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
 		a = opt(a)
 	}
 	return a
