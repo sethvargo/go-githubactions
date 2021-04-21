@@ -53,15 +53,24 @@ const (
 
 // New creates a new wrapper with helpers for outputting information in GitHub
 // actions format.
-func New() *Action {
-	return &Action{w: os.Stdout}
+func New(opts ...Option) *Action {
+	a := &Action{w: os.Stdout, getenv: os.Getenv}
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		a = opt(a)
+	}
+	return a
 }
 
 // NewWithWriter creates a wrapper using the given writer. This is useful for
 // tests. The given writer cannot add any prefixes to the string, since GitHub
 // requires these special strings to match a very particular format.
+//
+// Deprecated: Use New() with WithWriter instead.
 func NewWithWriter(w io.Writer) *Action {
-	return &Action{w: w}
+	return New(WithWriter(w))
 }
 
 // Action is an internal wrapper around GitHub Actions' output and magic
@@ -69,6 +78,7 @@ func NewWithWriter(w io.Writer) *Action {
 type Action struct {
 	w      io.Writer
 	fields CommandProperties
+	getenv GetenvFunc
 }
 
 // IssueCommand issues a new GitHub actions Command.
@@ -88,15 +98,11 @@ func (c *Action) IssueCommand(cmd *Command) {
 // with the 'Command' argument as it's scope is unclear in the current
 // TypeScript implementation.
 func (c *Action) IssueFileCommand(cmd *Command) error {
-	return c.issueFileCommand(cmd, os.Getenv)
-}
-
-func (c *Action) issueFileCommand(cmd *Command, f getenvFunc) error {
 	e := strings.ReplaceAll(cmd.Name, "-", "_")
 	e = strings.ToUpper(e)
 	e = "GITHUB_" + e
 
-	err := ioutil.WriteFile(f(e), []byte(cmd.Message+"\n"), os.ModeAppend)
+	err := ioutil.WriteFile(c.getenv(e), []byte(cmd.Message+"\n"), os.ModeAppend)
 	if err != nil {
 		return fmt.Errorf(errFileCmdFmt, err)
 	}
@@ -143,14 +149,10 @@ func (c *Action) RemoveMatcher(o string) {
 // https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#adding-a-system-path
 // https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) AddPath(p string) {
-	c.addPath(p, os.Getenv)
-}
-
-func (c *Action) addPath(p string, f getenvFunc) {
-	err := c.issueFileCommand(&Command{
+	err := c.IssueFileCommand(&Command{
 		Name:    pathCmd,
 		Message: p,
-	}, f)
+	})
 
 	if err != nil { // use regular command as fallback
 		// ::add-path::<p>
@@ -175,14 +177,10 @@ func (c *Action) SaveState(k, v string) {
 
 // GetInput gets the input by the given name.
 func (c *Action) GetInput(i string) string {
-	return c.getInput(i, os.Getenv)
-}
-
-func (c *Action) getInput(i string, f getenvFunc) string {
 	e := strings.ReplaceAll(i, " ", "_")
 	e = strings.ToUpper(e)
 	e = "INPUT_" + e
-	return strings.TrimSpace(f(e))
+	return strings.TrimSpace(c.getenv(e))
 }
 
 // Group starts a new collapsable region up to the next ungroup invocation.
@@ -210,14 +208,10 @@ func (c *Action) EndGroup() {
 // https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
 // https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) SetEnv(k, v string) {
-	c.setEnv(k, v, os.Getenv)
-}
-
-func (c *Action) setEnv(k, v string, f getenvFunc) {
-	err := c.issueFileCommand(&Command{
+	err := c.IssueFileCommand(&Command{
 		Name:    envCmd,
 		Message: fmt.Sprintf(envCmdMsgFmt, k, envCmdDelimiter, v, envCmdDelimiter),
-	}, f)
+	})
 
 	if err != nil { // use regular command as fallback
 		// ::set-env name=<k>::<v>
@@ -316,6 +310,6 @@ func (c *Action) WithFieldsMap(m map[string]string) *Action {
 	}
 }
 
-// getenvFunc is an abstraction to make tests feasible for commands that
+// GetenvFunc is an abstraction to make tests feasible for commands that
 // interact with environment variables.
-type getenvFunc func(k string) string
+type GetenvFunc func(k string) string

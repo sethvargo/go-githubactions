@@ -21,11 +21,27 @@ import (
 	"testing"
 )
 
-func TestAction_IssueCommand(t *testing.T) {
+func TestNewWithWriter(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
 	a := NewWithWriter(&b)
+
+	a.IssueCommand(&Command{
+		Name:    "foo",
+		Message: "bar",
+	})
+
+	if got, want := b.String(), "::foo::bar\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+func TestAction_IssueCommand(t *testing.T) {
+	t.Parallel()
+
+	var b bytes.Buffer
+	a := New(WithWriter(&b))
 	a.IssueCommand(&Command{
 		Name:    "foo",
 		Message: "bar",
@@ -48,12 +64,12 @@ func TestAction_IssueFileCommand(t *testing.T) {
 
 	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_FOO", file.Name())
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
 
-	err = a.issueFileCommand(&Command{
+	err = a.IssueFileCommand(&Command{
 		Name:    "foo",
 		Message: "bar",
-	}, fakeGetenvFunc)
+	})
 
 	if err != nil {
 		t.Errorf("expected nil error, got: %s", err)
@@ -79,7 +95,7 @@ func TestAction_AddMask(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.AddMask("foobar")
 
 	if got, want := b.String(), "::add-mask::foobar\n"; got != want {
@@ -91,7 +107,7 @@ func TestAction_AddMatcher(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.AddMatcher("foobar.json")
 
 	if got, want := b.String(), "::add-matcher::foobar.json\n"; got != want {
@@ -103,7 +119,7 @@ func TestAction_RemoveMatcher(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.RemoveMatcher("foobar")
 
 	if got, want := b.String(), "::remove-matcher owner=foobar::\n"; got != want {
@@ -119,9 +135,9 @@ func TestAction_AddPath(t *testing.T) {
 	// expect a regular command to be issued when env file is not set.
 	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubPath, "")
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
 
-	a.addPath("/custom/bin", fakeGetenvFunc)
+	a.AddPath("/custom/bin")
 	if got, want := b.String(), "::add-path::/custom/bin\n"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
@@ -136,8 +152,9 @@ func TestAction_AddPath(t *testing.T) {
 
 	defer os.Remove(file.Name())
 	fakeGetenvFunc = newFakeGetenvFunc(t, envGitHubPath, file.Name())
+	WithGetenv(fakeGetenvFunc)(a)
 
-	a.addPath("/custom/bin", fakeGetenvFunc)
+	a.AddPath("/custom/bin")
 
 	if got, want := b.String(), ""; got != want {
 		t.Errorf("expected %q to be %q", got, want)
@@ -163,7 +180,7 @@ func TestAction_SaveState(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.SaveState("key", "value")
 
 	if got, want := b.String(), "::save-state name=key::value\n"; got != want {
@@ -177,8 +194,8 @@ func TestAction_GetInput(t *testing.T) {
 	fakeGetenvFunc := newFakeGetenvFunc(t, "INPUT_FOO", "bar")
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
-	if got, want := a.getInput("foo", fakeGetenvFunc), "bar"; got != want {
+	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
+	if got, want := a.GetInput("foo"), "bar"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -187,7 +204,7 @@ func TestAction_Group(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.Group("mygroup")
 
 	if got, want := b.String(), "::group::mygroup\n"; got != want {
@@ -199,7 +216,7 @@ func TestAction_EndGroup(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.EndGroup()
 
 	if got, want := b.String(), "::endgroup::\n"; got != want {
@@ -223,8 +240,8 @@ func TestAction_SetEnv(t *testing.T) {
 	for _, check := range checks {
 		fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubEnv, "")
 		var b bytes.Buffer
-		a := NewWithWriter(&b)
-		a.setEnv(check.key, check.value, fakeGetenvFunc)
+		a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
+		a.SetEnv(check.key, check.value)
 		if got, want := b.String(), check.want; got != want {
 			t.Errorf("SetEnv(%q, %q): expected %q; got %q", check.key, check.value, want, got)
 		}
@@ -232,7 +249,6 @@ func TestAction_SetEnv(t *testing.T) {
 
 	// expectations for env file env commands
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
 	file, err := ioutil.TempFile(".", ".set_env_test_")
 	if err != nil {
 		t.Fatalf("unable to create a temp env file: %s", err)
@@ -240,8 +256,8 @@ func TestAction_SetEnv(t *testing.T) {
 
 	defer os.Remove(file.Name())
 	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubEnv, file.Name())
-
-	a.setEnv("key", "value", fakeGetenvFunc)
+	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
+	a.SetEnv("key", "value")
 
 	// expect an empty stdout buffer
 	if got, want := b.String(), ""; got != want {
@@ -264,7 +280,7 @@ func TestAction_SetOutput(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.SetOutput("key", "value")
 
 	if got, want := b.String(), "::set-output name=key::value\n"; got != want {
@@ -276,7 +292,7 @@ func TestAction_Debugf(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.Debugf("fail: %s", "thing")
 
 	if got, want := b.String(), "::debug::fail: thing\n"; got != want {
@@ -288,7 +304,7 @@ func TestAction_Errorf(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.Errorf("fail: %s", "thing")
 
 	if got, want := b.String(), "::error::fail: thing\n"; got != want {
@@ -300,7 +316,7 @@ func TestAction_Warningf(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.Warningf("fail: %s", "thing")
 
 	if got, want := b.String(), "::warning::fail: thing\n"; got != want {
@@ -312,7 +328,7 @@ func TestAction_Infof(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a.Infof("info: %s\n", "thing")
 
 	if got, want := b.String(), "info: thing\n"; got != want {
@@ -324,7 +340,7 @@ func TestAction_WithFieldsSlice(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a = a.WithFieldsSlice([]string{"line=100", "file=app.js"})
 	a.Debugf("fail: %s", "thing")
 
@@ -337,7 +353,7 @@ func TestAction_WithFieldsMap(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(WithWriter(&b))
 	a = a.WithFieldsMap(map[string]string{"line": "100", "file": "app.js"})
 	a.Debugf("fail: %s", "thing")
 
@@ -346,10 +362,10 @@ func TestAction_WithFieldsMap(t *testing.T) {
 	}
 }
 
-// newFakeGetenvFunc returns a new getenvFunc that is expected to be called with
+// newFakeGetenvFunc returns a new GetenvFunc that is expected to be called with
 // the provided key. It returns the provided value if the call matches the
 // provided key. It reports an error on test t otherwise.
-func newFakeGetenvFunc(t *testing.T, wantKey, v string) getenvFunc {
+func newFakeGetenvFunc(t *testing.T, wantKey, v string) GetenvFunc {
 	return func(gotKey string) string {
 		if gotKey != wantKey {
 			t.Errorf("expected call GetenvFunc(%q) to be GetenvFunc(%q)", gotKey, wantKey)
