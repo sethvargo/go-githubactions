@@ -25,7 +25,7 @@ func TestAction_IssueCommand(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.IssueCommand(&Command{
 		Name:    "foo",
 		Message: "bar",
@@ -79,7 +79,7 @@ func TestAction_AddMask(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.AddMask("foobar")
 
 	if got, want := b.String(), "::add-mask::foobar\n"; got != want {
@@ -91,7 +91,7 @@ func TestAction_AddMatcher(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.AddMatcher("foobar.json")
 
 	if got, want := b.String(), "::add-matcher::foobar.json\n"; got != want {
@@ -103,7 +103,7 @@ func TestAction_RemoveMatcher(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.RemoveMatcher("foobar")
 
 	if got, want := b.String(), "::remove-matcher owner=foobar::\n"; got != want {
@@ -164,7 +164,7 @@ func TestAction_SaveState(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.SaveState("key", "value")
 
 	if got, want := b.String(), "::save-state name=key::value\n"; got != want {
@@ -188,7 +188,7 @@ func TestAction_Group(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.Group("mygroup")
 
 	if got, want := b.String(), "::group::mygroup\n"; got != want {
@@ -200,7 +200,7 @@ func TestAction_EndGroup(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.EndGroup()
 
 	if got, want := b.String(), "::endgroup::\n"; got != want {
@@ -264,7 +264,7 @@ func TestAction_SetOutput(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.SetOutput("key", "value")
 
 	if got, want := b.String(), "::set-output name=key::value\n"; got != want {
@@ -276,7 +276,7 @@ func TestAction_Debugf(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.Debugf("fail: %s", "thing")
 
 	if got, want := b.String(), "::debug::fail: thing\n"; got != want {
@@ -288,7 +288,7 @@ func TestAction_Errorf(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.Errorf("fail: %s", "thing")
 
 	if got, want := b.String(), "::error::fail: thing\n"; got != want {
@@ -300,7 +300,7 @@ func TestAction_Warningf(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.Warningf("fail: %s", "thing")
 
 	if got, want := b.String(), "::warning::fail: thing\n"; got != want {
@@ -312,7 +312,7 @@ func TestAction_Infof(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a.Infof("info: %s\n", "thing")
 
 	if got, want := b.String(), "info: thing\n"; got != want {
@@ -324,7 +324,7 @@ func TestAction_WithFieldsSlice(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a = a.WithFieldsSlice([]string{"line=100", "file=app.js"})
 	a.Debugf("fail: %s", "thing")
 
@@ -337,7 +337,7 @@ func TestAction_WithFieldsMap(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b))
 	a = a.WithFieldsMap(map[string]string{"line": "100", "file": "app.js"})
 	a.Debugf("fail: %s", "thing")
 
