@@ -48,12 +48,12 @@ func TestAction_IssueFileCommand(t *testing.T) {
 
 	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_FOO", file.Name())
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
+	a := New(OptWriter(&b), OptGetenv(fakeGetenvFunc))
 
-	err = a.issueFileCommand(&Command{
+	err = a.IssueFileCommand(&Command{
 		Name:    "foo",
 		Message: "bar",
-	}, fakeGetenvFunc)
+	})
 
 	if err != nil {
 		t.Errorf("expected nil error, got: %s", err)

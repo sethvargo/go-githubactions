@@ -93,15 +93,11 @@ func (c *Action) IssueCommand(cmd *Command) {
 // with the 'Command' argument as it's scope is unclear in the current
 // TypeScript implementation.
 func (c *Action) IssueFileCommand(cmd *Command) error {
-	return c.issueFileCommand(cmd, c.getenv)
-}
-
-func (c *Action) issueFileCommand(cmd *Command, f getenvFunc) error {
 	e := strings.ReplaceAll(cmd.Name, "-", "_")
 	e = strings.ToUpper(e)
 	e = "GITHUB_" + e
 
-	err := ioutil.WriteFile(f(e), []byte(cmd.Message+"\n"), os.ModeAppend)
+	err := ioutil.WriteFile(c.getenv(e), []byte(cmd.Message+"\n"), os.ModeAppend)
 	if err != nil {
 		return fmt.Errorf(errFileCmdFmt, err)
 	}
