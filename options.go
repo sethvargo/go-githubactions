@@ -22,27 +22,30 @@ import (
 )
 
 // Option is a modifier for an Action
-type Option func(*Action)
+type Option func(*Action) *Action
 
 // OptWriter sets the writer function on an Action. By default, this will
 // be `os.Stdout` from the standard library.
 func OptWriter(w io.Writer) Option {
-	return func(a *Action) {
+	return func(a *Action) *Action {
 		a.w = w
+		return a
 	}
 }
 
 // OptFields sets the extra command field on an Action.
 func OptFields(fields CommandProperties) Option {
-	return func(a *Action) {
+	return func(a *Action) *Action {
 		a.fields = fields
+		return a
 	}
 }
 
 // OptGetenv sets the `Getenv` function on an Action. By default, this will
 // be `os.Getenv` from the standard library.
 func OptGetenv(getenv getenvFunc) Option {
-	return func(a *Action) {
+	return func(a *Action) *Action {
 		a.getenv = getenv
+		return a
 	}
 }
