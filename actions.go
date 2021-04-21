@@ -215,14 +215,10 @@ func (c *Action) EndGroup() {
 // https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-commands-for-github-actions#setting-an-environment-variable
 // https://github.blog/changelog/2020-10-01-github-actions-deprecating-set-env-and-add-path-commands/
 func (c *Action) SetEnv(k, v string) {
-	c.setEnv(k, v, c.getenv)
-}
-
-func (c *Action) setEnv(k, v string, f getenvFunc) {
-	err := c.issueFileCommand(&Command{
+	err := c.IssueFileCommand(&Command{
 		Name:    envCmd,
 		Message: fmt.Sprintf(envCmdMsgFmt, k, envCmdDelimiter, v, envCmdDelimiter),
-	}, f)
+	})
 
 	if err != nil { // use regular command as fallback
 		// ::set-env name=<k>::<v>

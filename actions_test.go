@@ -223,8 +223,8 @@ func TestAction_SetEnv(t *testing.T) {
 	for _, check := range checks {
 		fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubEnv, "")
 		var b bytes.Buffer
-		a := NewWithWriter(&b)
-		a.setEnv(check.key, check.value, fakeGetenvFunc)
+		a := New(OptWriter(&b), OptGetenv(fakeGetenvFunc))
+		a.SetEnv(check.key, check.value)
 		if got, want := b.String(), check.want; got != want {
 			t.Errorf("SetEnv(%q, %q): expected %q; got %q", check.key, check.value, want, got)
 		}
@@ -232,7 +232,6 @@ func TestAction_SetEnv(t *testing.T) {
 
 	// expectations for env file env commands
 	var b bytes.Buffer
-	a := NewWithWriter(&b)
 	file, err := ioutil.TempFile(".", ".set_env_test_")
 	if err != nil {
 		t.Fatalf("unable to create a temp env file: %s", err)
@@ -240,8 +239,8 @@ func TestAction_SetEnv(t *testing.T) {
 
 	defer os.Remove(file.Name())
 	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubEnv, file.Name())
-
-	a.setEnv("key", "value", fakeGetenvFunc)
+	a := New(OptWriter(&b), OptGetenv(fakeGetenvFunc))
+	a.SetEnv("key", "value")
 
 	// expect an empty stdout buffer
 	if got, want := b.String(), ""; got != want {
