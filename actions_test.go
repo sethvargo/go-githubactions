@@ -340,6 +340,8 @@ func TestAction_Errorf(t *testing.T) {
 }
 
 func TestAction_Fatalf(t *testing.T) {
+	// NOTE: This test case cannot be `t.Parallel()` because it patches a
+	//       global `osExit`, so could impact other (concurrent) test runs.
 	calls := []int{}
 	finalizer := osExitMock(&calls)
 	defer finalizer()
