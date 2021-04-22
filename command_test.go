@@ -37,4 +37,9 @@ func TestCommand_String(t *testing.T) {
 	if got, want := cmd.String(), "::foo bar=foo::bar"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
+
+	cmd = Command{Message: "quux"}
+	if got, want := cmd.String(), "::missing.command::quux"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
 }
