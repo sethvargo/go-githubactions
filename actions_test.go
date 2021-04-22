@@ -21,22 +21,6 @@ import (
 	"testing"
 )
 
-func TestNewWithWriter(t *testing.T) {
-	t.Parallel()
-
-	var b bytes.Buffer
-	a := NewWithWriter(&b)
-
-	a.IssueCommand(&Command{
-		Name:    "foo",
-		Message: "bar",
-	})
-
-	if got, want := b.String(), "::foo::bar\n"; got != want {
-		t.Errorf("expected %q to be %q", got, want)
-	}
-}
-
 func TestAction_IssueCommand(t *testing.T) {
 	t.Parallel()
 
