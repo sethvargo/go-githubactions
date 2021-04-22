@@ -340,8 +340,6 @@ func TestAction_Errorf(t *testing.T) {
 }
 
 func TestAction_Fatalf(t *testing.T) {
-	t.Parallel()
-
 	calls := []int{}
 	finalizer := osExitMock(&calls)
 	defer finalizer()
