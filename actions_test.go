@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -338,6 +339,26 @@ func TestAction_Errorf(t *testing.T) {
 	}
 }
 
+func TestAction_Fatalf(t *testing.T) {
+	t.Parallel()
+
+	calls := []int{}
+	finalizer := osExitMock(&calls)
+	defer finalizer()
+
+	var b bytes.Buffer
+	a := New(WithWriter(&b))
+	a.Fatalf("fail: %s", "bring")
+
+	if got, want := b.String(), "::error::fail: bring\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	if got, want := calls, []int{1}; !reflect.DeepEqual(got, want) {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
 func TestAction_Warningf(t *testing.T) {
 	t.Parallel()
 
@@ -415,4 +436,15 @@ func newFakeGetenvFunc(t *testing.T, wantKey, v string) GetenvFunc {
 
 		return v
 	}
+}
+
+func osExitMock(calls *[]int) func() {
+	osExit = func(code int) {
+		*calls = append(*calls, code)
+	}
+
+	finalizer := func() {
+		osExit = os.Exit
+	}
+	return finalizer
 }

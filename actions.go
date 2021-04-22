@@ -25,6 +25,11 @@ import (
 	"strings"
 )
 
+var (
+	// osExit allows `os.Exit()` to be stubbed during testing.
+	osExit = os.Exit
+)
+
 const (
 	addMaskCmd   = "add-mask"
 	setOutputCmd = "set-output"
@@ -263,7 +268,7 @@ func (c *Action) Errorf(msg string, args ...interface{}) {
 // followed by os.Exit(1).
 func (c *Action) Fatalf(msg string, args ...interface{}) {
 	c.Errorf(msg, args...)
-	os.Exit(1)
+	osExit(1)
 }
 
 // Infof prints a info-level message. The arguments follow the standard Printf
