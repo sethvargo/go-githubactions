@@ -375,6 +375,22 @@ func TestAction_WithFieldsSlice(t *testing.T) {
 	}
 }
 
+func TestAction_WithFieldsSlice_Panic(t *testing.T) {
+	t.Parallel()
+
+	defer func() {
+		want := `"no-equals" is not a proper k=v pair!`
+		if got := recover(); got != want {
+			t.Errorf("expected %q to be %q", got, want)
+		}
+	}()
+
+	var b bytes.Buffer
+	a := New(WithWriter(&b))
+	a = a.WithFieldsSlice([]string{"no-equals"})
+	a.Debugf("fail: %s", "thing")
+}
+
 func TestAction_WithFieldsMap(t *testing.T) {
 	t.Parallel()
 
