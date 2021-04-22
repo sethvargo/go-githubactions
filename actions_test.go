@@ -21,6 +21,32 @@ import (
 	"testing"
 )
 
+func TestNew(t *testing.T) {
+	t.Parallel()
+
+	var b bytes.Buffer
+	a := New(
+		WithWriter(&b),
+		nil,
+		WithGetenv(func(key string) string {
+			return key
+		}),
+	)
+
+	a.IssueCommand(&Command{
+		Name:    "foo",
+		Message: "bar",
+	})
+
+	if got, want := b.String(), "::foo::bar\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	if got, want := a.GetInput("quux"), "INPUT_QUUX"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
 func TestNewWithWriter(t *testing.T) {
 	t.Parallel()
 
