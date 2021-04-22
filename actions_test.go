@@ -18,8 +18,35 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 )
+
+func TestNew(t *testing.T) {
+	t.Parallel()
+
+	var b bytes.Buffer
+	a := New(
+		WithWriter(&b),
+		nil,
+		WithGetenv(func(key string) string {
+			return key
+		}),
+	)
+
+	a.IssueCommand(&Command{
+		Name:    "foo",
+		Message: "bar",
+	})
+
+	if got, want := b.String(), "::foo::bar\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	if got, want := a.GetInput("quux"), "INPUT_QUUX"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
 
 func TestNewWithWriter(t *testing.T) {
 	t.Parallel()
@@ -312,6 +339,26 @@ func TestAction_Errorf(t *testing.T) {
 	}
 }
 
+func TestAction_Fatalf(t *testing.T) {
+	// NOTE: This test case cannot be `t.Parallel()` because it patches a
+	//       global `osExit`, so could impact other (concurrent) test runs.
+	calls := []int{}
+	finalizer := osExitMock(&calls)
+	defer finalizer()
+
+	var b bytes.Buffer
+	a := New(WithWriter(&b))
+	a.Fatalf("fail: %s", "bring")
+
+	if got, want := b.String(), "::error::fail: bring\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	if got, want := calls, []int{1}; !reflect.DeepEqual(got, want) {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
 func TestAction_Warningf(t *testing.T) {
 	t.Parallel()
 
@@ -349,6 +396,22 @@ func TestAction_WithFieldsSlice(t *testing.T) {
 	}
 }
 
+func TestAction_WithFieldsSlice_Panic(t *testing.T) {
+	t.Parallel()
+
+	defer func() {
+		want := `"no-equals" is not a proper k=v pair!`
+		if got := recover(); got != want {
+			t.Errorf("expected %q to be %q", got, want)
+		}
+	}()
+
+	var b bytes.Buffer
+	a := New(WithWriter(&b))
+	a = a.WithFieldsSlice([]string{"no-equals"})
+	a.Debugf("fail: %s", "thing")
+}
+
 func TestAction_WithFieldsMap(t *testing.T) {
 	t.Parallel()
 
@@ -373,4 +436,15 @@ func newFakeGetenvFunc(t *testing.T, wantKey, v string) GetenvFunc {
 
 		return v
 	}
+}
+
+func osExitMock(calls *[]int) func() {
+	osExit = func(code int) {
+		*calls = append(*calls, code)
+	}
+
+	finalizer := func() {
+		osExit = os.Exit
+	}
+	return finalizer
 }

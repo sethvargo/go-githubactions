@@ -24,13 +24,22 @@ func TestCommand_String(t *testing.T) {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 
-	cmd.Message = "bar"
+	cmd = Command{Name: "foo", Message: "bar"}
 	if got, want := cmd.String(), "::foo::bar"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 
-	cmd.Properties = CommandProperties{"bar": "foo"}
+	cmd = Command{
+		Name:       "foo",
+		Message:    "bar",
+		Properties: CommandProperties{"bar": "foo"},
+	}
 	if got, want := cmd.String(), "::foo bar=foo::bar"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	cmd = Command{Message: "quux"}
+	if got, want := cmd.String(), "::missing.command::quux"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
