@@ -312,6 +312,7 @@ func (c *Action) WithFieldsMap(m map[string]string) *Action {
 	return &Action{
 		w:      c.w,
 		fields: m,
+		getenv: c.getenv,
 	}
 }
 
