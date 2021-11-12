@@ -16,9 +16,14 @@ package githubactions
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -422,6 +427,126 @@ func TestAction_WithFieldsMap(t *testing.T) {
 
 	if got, want := b.String(), "::debug file=app.js,line=100::fail: thing\n"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+func TestAction_GetIDToken(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("Authorization")
+		if len(token) < 7 {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		token = token[7:]
+
+		if token != "my-valid-token" {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		aud := r.URL.Query().Get("audience")
+		if aud != "" {
+			fmt.Fprintf(w, `{"value":"token.%s"}`, aud)
+			return
+		}
+
+		fmt.Fprint(w, `{"value":"token"}`)
+	}))
+
+	cases := []struct {
+		name     string
+		url      string
+		token    string
+		audience string
+		expResp  string
+		expErr   string
+	}{
+		{
+			name:   "missing_url",
+			url:    "",
+			token:  "my-valid-token",
+			expErr: "missing ACTIONS_ID_TOKEN_REQUEST_URL",
+		},
+		{
+			name:   "missing_token",
+			url:    "http://example.com",
+			token:  "",
+			expErr: "missing ACTIONS_ID_TOKEN_REQUEST_TOKEN",
+		},
+		{
+			name:   "invalid_url",
+			url:    "not-valid",
+			token:  "my-valid-token",
+			expErr: "failed to make HTTP request",
+		},
+		{
+			name:   "invalid_token",
+			url:    srv.URL,
+			token:  "abcd1234",
+			expErr: "non-successful response from minting OIDC token",
+		},
+		{
+			name:     "no_audience",
+			url:      srv.URL,
+			token:    "my-valid-token",
+			audience: "",
+			expResp:  "token",
+		},
+		{
+			name:     "audience",
+			url:      srv.URL,
+			token:    "my-valid-token",
+			audience: "my-aud",
+			expResp:  "token.my-aud",
+		},
+		{
+			name:     "audience_special_chars",
+			url:      srv.URL,
+			token:    "my-valid-token",
+			audience: "th!$my%a_d",
+			expResp:  "token.th!$my%a_d",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			getEnvFunc := func(k string) string {
+				switch k {
+				case "ACTIONS_ID_TOKEN_REQUEST_URL":
+					return tc.url
+				case "ACTIONS_ID_TOKEN_REQUEST_TOKEN":
+					return tc.token
+				default:
+					return ""
+				}
+			}
+
+			a := New(WithGetenv(getEnvFunc))
+			result, err := a.GetIDToken(ctx, tc.audience)
+			if err != nil {
+				if tc.expErr == "" {
+					t.Fatal(err)
+				}
+
+				if got, want := err.Error(), tc.expErr; !strings.Contains(got, want) {
+					t.Errorf("expected %q to be contain %q", got, want)
+				}
+			} else if tc.expErr != "" {
+				t.Errorf("expected error %q, got nothing", tc.expErr)
+			}
+
+			if got, want := result, tc.expResp; got != want {
+				t.Errorf("expected %q to be %q", got, want)
+			}
+		})
 	}
 }
 

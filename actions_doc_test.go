@@ -15,6 +15,8 @@
 package githubactions_test
 
 import (
+	"context"
+
 	"github.com/sethvargo/go-githubactions"
 )
 
@@ -104,4 +106,15 @@ func ExampleAction_SetEnv() {
 func ExampleAction_SetOutput() {
 	a := githubactions.New()
 	a.SetOutput("filepath", "/tmp/file-xyz1234")
+}
+
+func ExampleAction_GetIDToken() {
+	ctx := context.Background()
+
+	a := githubactions.New()
+	token, err := a.GetIDToken(ctx, "my-aud")
+	if err != nil {
+		// handle error
+	}
+	_ = token
 }

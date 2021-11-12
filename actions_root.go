@@ -14,6 +14,8 @@
 
 package githubactions
 
+import "context"
+
 var (
 	defaultAction = New()
 )
@@ -119,4 +121,9 @@ func WithFieldsSlice(f []string) *Action {
 // are automatically converted to k=v pairs and sorted.
 func WithFieldsMap(m map[string]string) *Action {
 	return defaultAction.WithFieldsMap(m)
+}
+
+// GetIDToken returns the GitHub OIDC token from the GitHub Actions runtime.
+func GetIDToken(ctx context.Context, audience string) (string, error) {
+	return defaultAction.GetIDToken(ctx, audience)
 }
