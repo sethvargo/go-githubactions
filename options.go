@@ -19,6 +19,7 @@ package githubactions
 
 import (
 	"io"
+	"net/http"
 )
 
 // Option is a modifier for an Action
@@ -46,6 +47,16 @@ func WithFields(fields CommandProperties) Option {
 func WithGetenv(getenv GetenvFunc) Option {
 	return func(a *Action) *Action {
 		a.getenv = getenv
+		return a
+	}
+}
+
+// WithHTTPClient sets a custom HTTP client on the action. This is only used
+// when the action makes output HTTP requests (such as generating an OIDC
+// token).
+func WithHTTPClient(c *http.Client) Option {
+	return func(a *Action) *Action {
+		a.httpClient = c
 		return a
 	}
 }

@@ -12,47 +12,54 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Test
+name: 'Test'
 
 on:
   push:
     branches:
-    - main
+    - 'main'
     tags:
     - '*'
   pull_request:
     branches:
-    - main
+    - 'main'
+
+concurrency:
+  group: '${{ github.head_ref || github.ref }}'
+  cancel-in-progress: true
 
 jobs:
   test:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os:
+        - 'ubuntu-latest'
+        - 'windows-latest'
+        - 'macos-latest'
         go:
         - '1.13'
         - '1.14'
         - '1.15'
+        - '1.16'
+        - '1.17'
 
-    runs-on: ubuntu-latest
+    runs-on: '${{ matrix.os }}'
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: 'actions/checkout@v2'
 
-    - uses: actions/setup-go@v2
+    - uses: 'actions/setup-go@v2'
       with:
         go-version: '${{ matrix.go }}'
 
-    - uses: actions/cache@v2
+    - uses: 'actions/cache@v2'
       with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        path: '~/go/pkg/mod'
+        key: '${{ matrix.os }}-go-${{ matrix.go }}-${{ hashFiles(''**/go.sum'') }}'
         restore-keys: |
-          ${{ runner.os }}-go-
+          ${{ matrix.os }}-go-${{ matrix.go }}
+          ${{ matrix.os }}-go-
 
-    - name: Lint
-      run: make fmtcheck staticcheck spellcheck
-
-    - name: Test
+    - name: 'Test'
       run: make test-acc

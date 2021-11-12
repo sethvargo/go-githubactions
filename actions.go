@@ -18,11 +18,17 @@
 package githubactions
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 var (
@@ -59,13 +65,21 @@ const (
 // New creates a new wrapper with helpers for outputting information in GitHub
 // actions format.
 func New(opts ...Option) *Action {
-	a := &Action{w: os.Stdout, getenv: os.Getenv}
+	a := &Action{
+		w:      os.Stdout,
+		getenv: os.Getenv,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
+
 	for _, opt := range opts {
 		if opt == nil {
 			continue
 		}
 		a = opt(a)
 	}
+
 	return a
 }
 
@@ -81,9 +95,10 @@ func NewWithWriter(w io.Writer) *Action {
 // Action is an internal wrapper around GitHub Actions' output and magic
 // strings.
 type Action struct {
-	w      io.Writer
-	fields CommandProperties
-	getenv GetenvFunc
+	w          io.Writer
+	fields     CommandProperties
+	getenv     GetenvFunc
+	httpClient *http.Client
 }
 
 // IssueCommand issues a new GitHub actions Command.
@@ -314,6 +329,64 @@ func (c *Action) WithFieldsMap(m map[string]string) *Action {
 		fields: m,
 		getenv: c.getenv,
 	}
+}
+
+// idTokenResponse is the response from minting an ID token.
+type idTokenResponse struct {
+	Value string `json:"value,omitempty"`
+}
+
+// GetIDToken returns the GitHub OIDC token from the GitHub Actions runtime.
+func (c *Action) GetIDToken(ctx context.Context, audience string) (string, error) {
+	requestURL := c.getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
+	if requestURL == "" {
+		return "", fmt.Errorf("missing ACTIONS_ID_TOKEN_REQUEST_URL in environment")
+	}
+
+	requestToken := c.getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+	if requestToken == "" {
+		return "", fmt.Errorf("missing ACTIONS_ID_TOKEN_REQUEST_TOKEN in environment")
+	}
+
+	u, err := url.Parse(requestURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse request URL: %w", err)
+	}
+	if audience != "" {
+		q := u.Query()
+		q.Set("audience", audience)
+		u.RawQuery = q.Encode()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+requestToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to make HTTP request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// This has moved to the io package in Go 1.16, but we still support up to Go
+	// 1.13 for now.
+	body, err := ioutil.ReadAll(io.LimitReader(resp.Body, 64*1000))
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+	body = bytes.TrimSpace(body)
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("non-successful response from minting OIDC token: %s", body)
+	}
+
+	var tokenResp idTokenResponse
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		return "", fmt.Errorf("failed to process response as JSON: %w", err)
+	}
+	return tokenResp.Value, nil
 }
 
 // GetenvFunc is an abstraction to make tests feasible for commands that
