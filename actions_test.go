@@ -400,6 +400,18 @@ func TestAction_Infof(t *testing.T) {
 	}
 }
 
+func TestAction_Infof_NoNewline(t *testing.T) {
+	t.Parallel()
+
+	var b bytes.Buffer
+	a := New(WithWriter(&b))
+	a.Infof("info: %s", "thing")
+
+	if got, want := b.String(), "info: thing\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
 func TestAction_WithFieldsSlice(t *testing.T) {
 	t.Parallel()
 

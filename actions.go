@@ -309,11 +309,17 @@ func (c *Action) Fatalf(msg string, args ...interface{}) {
 	osExit(1)
 }
 
-// Infof prints a info-level message. The arguments follow the standard Printf
-// arguments.
+// Infof prints message to stdout without any level annotations.
+// The arguments follow the standard Printf arguments.
 func (c *Action) Infof(msg string, args ...interface{}) {
-	// ::info <c.fields>::<msg, args>
-	fmt.Fprintf(c.w, msg, args...)
+	s := fmt.Sprintf(msg, args...)
+
+	// behave like other commands and log.Printf by adding newline if needed
+	if len(s) == 0 || s[len(s)-1] != '\n' {
+		s += "\n"
+	}
+
+	fmt.Fprint(c.w, s)
 }
 
 // WithFieldsSlice includes the provided fields in log output. "f" must be a
