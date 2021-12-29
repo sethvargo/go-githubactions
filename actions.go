@@ -56,8 +56,9 @@ const (
 	endGroupCmd = "endgroup"
 
 	debugCmd   = "debug"
-	errorCmd   = "error"
+	noticeCmd  = "notice"
 	warningCmd = "warning"
+	errorCmd   = "error"
 
 	errFileCmdFmt = "unable to write command to the environment file: %s"
 )
@@ -268,6 +269,28 @@ func (c *Action) Debugf(msg string, args ...interface{}) {
 	})
 }
 
+// Noticef prints a notice-level message. The arguments follow the standard Printf
+// arguments.
+func (c *Action) Noticef(msg string, args ...interface{}) {
+	// ::notice <c.fields>::<msg, args>
+	c.IssueCommand(&Command{
+		Name:       noticeCmd,
+		Message:    fmt.Sprintf(msg, args...),
+		Properties: c.fields,
+	})
+}
+
+// Warningf prints a warning-level message. The arguments follow the standard Printf
+// arguments.
+func (c *Action) Warningf(msg string, args ...interface{}) {
+	// ::warning <c.fields>::<msg, args>
+	c.IssueCommand(&Command{
+		Name:       warningCmd,
+		Message:    fmt.Sprintf(msg, args...),
+		Properties: c.fields,
+	})
+}
+
 // Errorf prints a error-level message. The arguments follow the standard Printf
 // arguments.
 func (c *Action) Errorf(msg string, args ...interface{}) {
@@ -291,17 +314,6 @@ func (c *Action) Fatalf(msg string, args ...interface{}) {
 func (c *Action) Infof(msg string, args ...interface{}) {
 	// ::info <c.fields>::<msg, args>
 	fmt.Fprintf(c.w, msg, args...)
-}
-
-// Warningf prints a warning-level message. The arguments follow the standard
-// Printf arguments.
-func (c *Action) Warningf(msg string, args ...interface{}) {
-	// ::warning <c.fields>::<msg, args>
-	c.IssueCommand(&Command{
-		Name:       warningCmd,
-		Message:    fmt.Sprintf(msg, args...),
-		Properties: c.fields,
-	})
 }
 
 // WithFieldsSlice includes the provided fields in log output. "f" must be a
