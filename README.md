@@ -61,14 +61,14 @@ For more examples and API documentation, please see the [Go docs][godoc].
 By default, GitHub Actions expects actions to be written in Node.js. For other languages like Go, you need to provide a `Dockerfile` and entrypoint instructions in an `action.yml` file:
 
 ```dockerfile
-# Dockerfile
-FROM golang:1.13
+# your-repo/Dockerfile
+FROM golang:1.17
 RUN go build -o /bin/app .
 ENTRYPOINT ["/bin/app"]
 ```
 
 ```yaml
-# action.yml
+# your-repo/action.yml
 name: My action
 author: My name
 description: My description
@@ -81,6 +81,7 @@ runs:
 And then users can import your action by the repository name:
 
 ```yaml
+# their-repo/.github/workflows/thing.yml
 steps:
 - name: My action
   uses: username/repo@latest
@@ -99,7 +100,7 @@ steps:
 Now we can precompile and publish our Go Action as a Docker container, but we need to make it much, much smaller first. This can be achieved using multi-stage Docker builds:
 
 ```dockerfile
-FROM golang:1.13 AS builder
+FROM golang:1.17 AS builder
 
 ENV GO111MODULE=on \
   CGO_ENABLED=0 \
@@ -117,7 +118,6 @@ RUN go build \
   -ldflags "-s -w -extldflags '-static'" \
   -installsuffix cgo \
   -tags netgo \
-  -mod vendor \
   -o /bin/app \
   . \
   && strip /bin/app \
