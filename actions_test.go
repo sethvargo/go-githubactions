@@ -364,6 +364,18 @@ func TestAction_Fatalf(t *testing.T) {
 	}
 }
 
+func TestAction_Noticef(t *testing.T) {
+	t.Parallel()
+
+	var b bytes.Buffer
+	a := New(WithWriter(&b))
+	a.Noticef("fail: %s", "thing")
+
+	if got, want := b.String(), "::notice::fail: thing\n"; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
 func TestAction_Warningf(t *testing.T) {
 	t.Parallel()
 
