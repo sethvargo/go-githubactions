@@ -44,7 +44,7 @@ func TestNew(t *testing.T) {
 		Message: "bar",
 	})
 
-	if got, want := b.String(), "::foo::bar\n"; got != want {
+	if got, want := b.String(), "::foo::bar"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 
@@ -64,7 +64,7 @@ func TestNewWithWriter(t *testing.T) {
 		Message: "bar",
 	})
 
-	if got, want := b.String(), "::foo::bar\n"; got != want {
+	if got, want := b.String(), "::foo::bar"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -79,7 +79,7 @@ func TestAction_IssueCommand(t *testing.T) {
 		Message: "bar",
 	})
 
-	if got, want := b.String(), "::foo::bar\n"; got != want {
+	if got, want := b.String(), "::foo::bar"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -118,7 +118,7 @@ func TestAction_IssueFileCommand(t *testing.T) {
 		t.Errorf("unable to read temp env file: %s", err)
 	}
 
-	if got, want := string(data), "bar\n"; got != want {
+	if got, want := string(data), "bar"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -130,7 +130,7 @@ func TestAction_AddMask(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.AddMask("foobar")
 
-	if got, want := b.String(), "::add-mask::foobar\n"; got != want {
+	if got, want := b.String(), "::add-mask::foobar"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -142,7 +142,7 @@ func TestAction_AddMatcher(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.AddMatcher("foobar.json")
 
-	if got, want := b.String(), "::add-matcher::foobar.json\n"; got != want {
+	if got, want := b.String(), "::add-matcher::foobar.json"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -154,7 +154,7 @@ func TestAction_RemoveMatcher(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.RemoveMatcher("foobar")
 
-	if got, want := b.String(), "::remove-matcher owner=foobar::\n"; got != want {
+	if got, want := b.String(), "::remove-matcher owner=foobar::"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -170,7 +170,7 @@ func TestAction_AddPath(t *testing.T) {
 	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
 
 	a.AddPath("/custom/bin")
-	if got, want := b.String(), "::add-path::/custom/bin\n"; got != want {
+	if got, want := b.String(), "::add-path::/custom/bin"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 
@@ -203,7 +203,7 @@ func TestAction_AddPath(t *testing.T) {
 		t.Errorf("unable to read temp env file: %s", err)
 	}
 
-	if got, want := string(data), "/custom/bin\n"; got != want {
+	if got, want := string(data), "/custom/bin"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -215,7 +215,7 @@ func TestAction_SaveState(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.SaveState("key", "value")
 
-	if got, want := b.String(), "::save-state name=key::value\n"; got != want {
+	if got, want := b.String(), "::save-state name=key::value"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -239,7 +239,7 @@ func TestAction_Group(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.Group("mygroup")
 
-	if got, want := b.String(), "::group::mygroup\n"; got != want {
+	if got, want := b.String(), "::group::mygroup"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -251,7 +251,7 @@ func TestAction_EndGroup(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.EndGroup()
 
-	if got, want := b.String(), "::endgroup::\n"; got != want {
+	if got, want := b.String(), "::endgroup::"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -265,8 +265,8 @@ func TestAction_SetEnv(t *testing.T) {
 	checks := []struct {
 		key, value, want string
 	}{
-		{"key", "value", "::set-env name=key::value\n"},
-		{"key", "this is 100% a special\n\r value!", "::set-env name=key::this is 100%25 a special%0A%0D value!\n"},
+		{"key", "value", "::set-env name=key::value" + EOF},
+		{"key", "this is 100% a special\n\r value!", "::set-env name=key::this is 100%25 a special%0A%0D value!" + EOF},
 	}
 
 	for _, check := range checks {
@@ -302,7 +302,7 @@ func TestAction_SetEnv(t *testing.T) {
 		t.Errorf("unable to read temp env file: %s", err)
 	}
 
-	want := "key<<_GitHubActionsFileCommandDelimeter_\nvalue\n_GitHubActionsFileCommandDelimeter_\n"
+	want := "key<<_GitHubActionsFileCommandDelimeter_" + EOF + "value" + EOF + "_GitHubActionsFileCommandDelimeter_" + EOF
 	if got := string(data); got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
@@ -315,7 +315,7 @@ func TestAction_SetOutput(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.SetOutput("key", "value")
 
-	if got, want := b.String(), "::set-output name=key::value\n"; got != want {
+	if got, want := b.String(), "::set-output name=key::value"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -327,7 +327,7 @@ func TestAction_Debugf(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.Debugf("fail: %s", "thing")
 
-	if got, want := b.String(), "::debug::fail: thing\n"; got != want {
+	if got, want := b.String(), "::debug::fail: thing"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -339,7 +339,7 @@ func TestAction_Noticef(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.Noticef("fail: %s", "thing")
 
-	if got, want := b.String(), "::notice::fail: thing\n"; got != want {
+	if got, want := b.String(), "::notice::fail: thing"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -351,7 +351,7 @@ func TestAction_Warningf(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.Warningf("fail: %s", "thing")
 
-	if got, want := b.String(), "::warning::fail: thing\n"; got != want {
+	if got, want := b.String(), "::warning::fail: thing"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -363,7 +363,7 @@ func TestAction_Errorf(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.Errorf("fail: %s", "thing")
 
-	if got, want := b.String(), "::error::fail: thing\n"; got != want {
+	if got, want := b.String(), "::error::fail: thing"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -379,7 +379,7 @@ func TestAction_Fatalf(t *testing.T) {
 	a := New(WithWriter(&b))
 	a.Fatalf("fail: %s", "bring")
 
-	if got, want := b.String(), "::error::fail: bring\n"; got != want {
+	if got, want := b.String(), "::error::fail: bring"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 
@@ -393,21 +393,9 @@ func TestAction_Infof(t *testing.T) {
 
 	var b bytes.Buffer
 	a := New(WithWriter(&b))
-	a.Infof("info: %s\n", "thing")
-
-	if got, want := b.String(), "info: thing\n"; got != want {
-		t.Errorf("expected %q to be %q", got, want)
-	}
-}
-
-func TestAction_Infof_NoNewline(t *testing.T) {
-	t.Parallel()
-
-	var b bytes.Buffer
-	a := New(WithWriter(&b))
 	a.Infof("info: %s", "thing")
 
-	if got, want := b.String(), "info: thing\n"; got != want {
+	if got, want := b.String(), "info: thing"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -420,7 +408,7 @@ func TestAction_WithFieldsSlice(t *testing.T) {
 	a = a.WithFieldsSlice([]string{"line=100", "file=app.js"})
 	a.Debugf("fail: %s", "thing")
 
-	if got, want := b.String(), "::debug file=app.js,line=100::fail: thing\n"; got != want {
+	if got, want := b.String(), "::debug file=app.js,line=100::fail: thing"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -449,7 +437,7 @@ func TestAction_WithFieldsMap(t *testing.T) {
 	a = a.WithFieldsMap(map[string]string{"line": "100", "file": "app.js"})
 	a.Debugf("fail: %s", "thing")
 
-	if got, want := b.String(), "::debug file=app.js,line=100::fail: thing\n"; got != want {
+	if got, want := b.String(), "::debug file=app.js,line=100::fail: thing"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }

@@ -44,9 +44,9 @@ const (
 	addPathCmd = "add-path" // used when issuing the regular command
 	pathCmd    = "path"     // used when issuing the file command
 
-	setEnvCmd       = "set-env"        // used when issuing the regular command
-	envCmd          = "env"            // used when issuing the file command
-	envCmdMsgFmt    = "%s<<%s\n%s\n%s" // ${name}<<${delimiter}${os.EOL}${convertedVal}${os.EOL}${delimiter}
+	setEnvCmd       = "set-env"                          // used when issuing the regular command
+	envCmd          = "env"                              // used when issuing the file command
+	envCmdMsgFmt    = "%s<<%s" + EOF + "%s" + EOF + "%s" // ${name}<<${delimiter}${os.EOL}${convertedVal}${os.EOL}${delimiter}
 	envCmdDelimiter = "_GitHubActionsFileCommandDelimeter_"
 
 	addMatcherCmd    = "add-matcher"
@@ -104,7 +104,7 @@ type Action struct {
 
 // IssueCommand issues a new GitHub actions Command.
 func (c *Action) IssueCommand(cmd *Command) {
-	fmt.Fprintln(c.w, cmd.String())
+	fmt.Fprint(c.w, cmd.String()+EOF)
 }
 
 // IssueFileCommand issues a new GitHub actions Command using environment files.
@@ -123,8 +123,9 @@ func (c *Action) IssueFileCommand(cmd *Command) error {
 	e = strings.ToUpper(e)
 	e = "GITHUB_" + e
 
-	err := ioutil.WriteFile(c.getenv(e), []byte(cmd.Message+"\n"), os.ModeAppend)
-	if err != nil {
+	filepath := c.getenv(e)
+	msg := []byte(cmd.Message + EOF)
+	if err := ioutil.WriteFile(filepath, msg, os.ModeAppend); err != nil {
 		return fmt.Errorf(errFileCmdFmt, err)
 	}
 
@@ -258,8 +259,8 @@ func (c *Action) SetOutput(k, v string) {
 	})
 }
 
-// Debugf prints a debug-level message. The arguments follow the standard Printf
-// arguments.
+// Debugf prints a debug-level message. It follows the standard fmt.Printf
+// arguments, appending an operating-system to the end of the message.
 func (c *Action) Debugf(msg string, args ...interface{}) {
 	// ::debug <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
@@ -269,8 +270,8 @@ func (c *Action) Debugf(msg string, args ...interface{}) {
 	})
 }
 
-// Noticef prints a notice-level message. The arguments follow the standard Printf
-// arguments.
+// Noticef prints a notice-level message. It follows the standard fmt.Printf
+// arguments, appending an operating-system to the end of the message.
 func (c *Action) Noticef(msg string, args ...interface{}) {
 	// ::notice <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
@@ -280,8 +281,8 @@ func (c *Action) Noticef(msg string, args ...interface{}) {
 	})
 }
 
-// Warningf prints a warning-level message. The arguments follow the standard Printf
-// arguments.
+// Warningf prints a warning-level message. It follows the standard fmt.Printf
+// arguments, appending an operating-system to the end of the message.
 func (c *Action) Warningf(msg string, args ...interface{}) {
 	// ::warning <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
@@ -291,8 +292,8 @@ func (c *Action) Warningf(msg string, args ...interface{}) {
 	})
 }
 
-// Errorf prints a error-level message. The arguments follow the standard Printf
-// arguments.
+// Errorf prints a error-level message. It follows the standard fmt.Printf
+// arguments, appending an operating-system to the end of the message.
 func (c *Action) Errorf(msg string, args ...interface{}) {
 	// ::error <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
@@ -309,17 +310,11 @@ func (c *Action) Fatalf(msg string, args ...interface{}) {
 	osExit(1)
 }
 
-// Infof prints message to stdout without any level annotations.
-// The arguments follow the standard Printf arguments.
+// Infof prints message to stdout without any level annotations. It follows the
+// standard fmt.Printf arguments, appending an operating-system to the end of
+// the message.
 func (c *Action) Infof(msg string, args ...interface{}) {
-	s := fmt.Sprintf(msg, args...)
-
-	// behave like other commands and log.Printf by adding newline if needed
-	if len(s) == 0 || s[len(s)-1] != '\n' {
-		s += "\n"
-	}
-
-	fmt.Fprint(c.w, s)
+	fmt.Fprintf(c.w, msg+EOF, args...)
 }
 
 // WithFieldsSlice includes the provided fields in log output. "f" must be a

@@ -32,7 +32,7 @@ func TestWithWriter(t *testing.T) {
 		Message: "bar",
 	})
 
-	if got, want := b.String(), "::foo::bar\n"; got != want {
+	if got, want := b.String(), "::foo::bar"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -51,7 +51,7 @@ func TestWithFields(t *testing.T) {
 		Properties: a.fields,
 	})
 
-	if got, want := b.String(), "::foo baz=quux::bar\n"; got != want {
+	if got, want := b.String(), "::foo baz=quux::bar"+EOF; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
