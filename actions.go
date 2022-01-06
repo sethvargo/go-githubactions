@@ -260,7 +260,7 @@ func (c *Action) SetOutput(k, v string) {
 }
 
 // Debugf prints a debug-level message. It follows the standard fmt.Printf
-// arguments, appending an operating-system to the end of the message.
+// arguments, appending an OS-specific line break to the end of the message.
 func (c *Action) Debugf(msg string, args ...interface{}) {
 	// ::debug <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
@@ -271,7 +271,7 @@ func (c *Action) Debugf(msg string, args ...interface{}) {
 }
 
 // Noticef prints a notice-level message. It follows the standard fmt.Printf
-// arguments, appending an operating-system to the end of the message.
+// arguments, appending an OS-specific line break to the end of the message.
 func (c *Action) Noticef(msg string, args ...interface{}) {
 	// ::notice <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
@@ -282,7 +282,7 @@ func (c *Action) Noticef(msg string, args ...interface{}) {
 }
 
 // Warningf prints a warning-level message. It follows the standard fmt.Printf
-// arguments, appending an operating-system to the end of the message.
+// arguments, appending an OS-specific line break to the end of the message.
 func (c *Action) Warningf(msg string, args ...interface{}) {
 	// ::warning <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
@@ -293,7 +293,7 @@ func (c *Action) Warningf(msg string, args ...interface{}) {
 }
 
 // Errorf prints a error-level message. It follows the standard fmt.Printf
-// arguments, appending an operating-system to the end of the message.
+// arguments, appending an OS-specific line break to the end of the message.
 func (c *Action) Errorf(msg string, args ...interface{}) {
 	// ::error <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
@@ -310,9 +310,8 @@ func (c *Action) Fatalf(msg string, args ...interface{}) {
 	osExit(1)
 }
 
-// Infof prints message to stdout without any level annotations. It follows the
-// standard fmt.Printf arguments, appending an operating-system to the end of
-// the message.
+// Infof prints message to stdout without any level annotations. It follows the standard fmt.Printf
+// arguments, appending an OS-specific line break to the end of the message.
 func (c *Action) Infof(msg string, args ...interface{}) {
 	fmt.Fprintf(c.w, msg+EOF, args...)
 }
