@@ -290,6 +290,7 @@ func TestAction_SetEnv(t *testing.T) {
 	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubEnv, file.Name())
 	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
 	a.SetEnv("key", "value")
+	a.SetEnv("key2", "value2")
 
 	// expect an empty stdout buffer
 	if got, want := b.String(), ""; got != want {
@@ -303,6 +304,7 @@ func TestAction_SetEnv(t *testing.T) {
 	}
 
 	want := "key<<_GitHubActionsFileCommandDelimeter_" + EOF + "value" + EOF + "_GitHubActionsFileCommandDelimeter_" + EOF
+	want += "key2<<_GitHubActionsFileCommandDelimeter_" + EOF + "value2" + EOF + "_GitHubActionsFileCommandDelimeter_" + EOF
 	if got := string(data); got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
