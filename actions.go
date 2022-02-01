@@ -125,10 +125,14 @@ func (c *Action) IssueFileCommand(cmd *Command) error {
 
 	filepath := c.getenv(e)
 	msg := []byte(cmd.Message + EOF)
-	if err := ioutil.WriteFile(filepath, msg, os.ModeAppend); err != nil {
+	f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
 		return fmt.Errorf(errFileCmdFmt, err)
 	}
-
+	defer f.Close()
+	if _, err := f.Write(msg); err != nil {
+		return fmt.Errorf(errFileCmdFmt, err)
+	}
 	return nil
 }
 
