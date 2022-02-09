@@ -341,9 +341,10 @@ func (c *Action) WithFieldsSlice(f []string) *Action {
 // are automatically converted to k=v pairs and sorted.
 func (c *Action) WithFieldsMap(m map[string]string) *Action {
 	return &Action{
-		w:      c.w,
-		fields: m,
-		getenv: c.getenv,
+		w:          c.w,
+		fields:     m,
+		getenv:     c.getenv,
+		httpClient: c.httpClient,
 	}
 }
 
