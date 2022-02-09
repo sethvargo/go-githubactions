@@ -19,7 +19,7 @@ import (
 	"net/http"
 )
 
-// Option is a modifier for an Action
+// Option is a modifier for an Action.
 type Option func(*Action) *Action
 
 // WithWriter sets the writer function on an Action. By default, this will

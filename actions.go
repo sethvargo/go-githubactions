@@ -405,6 +405,12 @@ func (c *Action) GetIDToken(ctx context.Context, audience string) (string, error
 	return tokenResp.Value, nil
 }
 
+// Getenv retrieves the value of the environment variable named by the key.
+// It uses an internal function that can be set with `WithGetenv`.
+func (c *Action) Getenv(key string) string {
+	return c.getenv(key)
+}
+
 // GetenvFunc is an abstraction to make tests feasible for commands that
 // interact with environment variables.
-type GetenvFunc func(k string) string
+type GetenvFunc func(key string) string

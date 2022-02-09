@@ -65,7 +65,7 @@ func TestWithGetenv(t *testing.T) {
 	})
 
 	opt(a)
-	if got, want := a.getenv("any"), "sentinel"; got != want {
+	if got, want := a.Getenv("any"), "sentinel"; got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
