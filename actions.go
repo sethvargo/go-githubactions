@@ -457,7 +457,7 @@ type GetenvFunc func(key string) string
 type Context struct {
 	Event            map[string]interface{}
 	EventPayloadPath string `env:"GITHUB_EVENT_PATH,required"`
-	EventName        string
+	EventName        string `env:"GITHUB_EVENT_NAME"`
 	SHA              string `env:"GITHUB_SHA"`
 	Ref              string `env:"GITHUB_REF"`
 	Workflow         string `env:"GITHUB_WORKFLOW"`
