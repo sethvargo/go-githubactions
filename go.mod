@@ -15,3 +15,5 @@
 module github.com/sethvargo/go-githubactions
 
 go 1.18
+
+require github.com/sethvargo/go-envconfig v0.6.0
