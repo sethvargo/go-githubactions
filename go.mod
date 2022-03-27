@@ -15,3 +15,5 @@
 module github.com/sethvargo/go-githubactions
 
 go 1.13
+
+require github.com/sethvargo/go-envconfig v0.5.0 // indirect

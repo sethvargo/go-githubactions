@@ -1,0 +1,4 @@
+github.com/google/go-cmp v0.4.1/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+github.com/sethvargo/go-envconfig v0.5.0 h1:puRfYHj1HUe03MSPVBW8zc2BtRyn/KySgZcICXOzpVg=
+github.com/sethvargo/go-envconfig v0.5.0/go.mod h1:00S1FAhRUuTNJazWBWcJGvEHOM+NO6DhoRMAOX7FY5o=
+golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=

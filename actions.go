@@ -22,12 +22,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/sethvargo/go-envconfig"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -419,31 +419,34 @@ type GetenvFunc func(key string) string
 
 // Context of current workflow
 type Context struct {
-	Event      map[string]interface{}
-	EventName  string
-	SHA        string
-	Ref        string
-	Workflow   string
-	Action     string
-	Actor      string
-	Job        string
-	RunNumber  int
-	RunID      int
-	APIURL     string
-	ServerURL  string
-	GraphqlURL string
+	Event            map[string]interface{}
+	EventPayloadPath string `env:"GITHUB_EVENT_PATH,required"`
+	EventName        string
+	SHA              string `env:"GITHUB_SHA"`
+	Ref              string `env:"GITHUB_REF"`
+	Workflow         string `env:"GITHUB_WORKFLOW"`
+	Action           string `env:"GITHUB_ACTION"`
+	Actor            string `env:"GITHUB_ACTOR"`
+	Job              string `env:"GITHUB_JOB"`
+	RunNumber        int    `env:"GITHUB_RUN_NUMBER"`
+	RunID            int    `env:"GITHUB_RUN_ID"`
+	APIURL           string `env:"GITHUB_API_URL,default=https://api.github.com"`
+	ServerURL        string `env:"GITHUB_SERVER_URL,default=https://github.com"`
+	GraphqlURL       string `env:"GITHUB_GRAPHQL_URL,default=https://api.github.com/graphql"`
 }
 
 // Context returns the context of current action with the payload object that triggered the workflow
-func (c *Action) Context() (*Context, error) {
-	var rawEvent map[string]interface{}
+func (c *Action) Context(ctx context.Context) (*Context, error) {
+	var (
+		rawEvent  map[string]interface{}
+		githubCtx Context
+	)
 
-	eventPath := c.Getenv("GITHUB_EVENT_PATH")
-	if eventPath == "" {
-		return nil, fmt.Errorf("missing GITHUB_EVENT_PATH in environment")
+	if err := envconfig.Process(ctx, &githubCtx); err != nil {
+		return nil, fmt.Errorf("could not process context variables: %w", err)
 	}
 
-	eventData, err := ioutil.ReadFile(eventPath)
+	eventData, err := ioutil.ReadFile(githubCtx.EventPayloadPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not read event file: %w", err)
 	}
@@ -452,41 +455,5 @@ func (c *Action) Context() (*Context, error) {
 		return nil, fmt.Errorf("could not unmarshall event payload: %w", err)
 	}
 
-	ctx := &Context{Event: rawEvent}
-	ctx.EventName = c.getenv("GITHUB_EVENT_NAME")
-	ctx.SHA = c.getenv("GITHUB_SHA")
-	ctx.Ref = c.getenv("GITHUB_REF")
-	ctx.Workflow = c.getenv("GITHUB_WORKFLOW")
-	ctx.Action = c.getenv("GITHUB_ACTION")
-	ctx.Actor = c.getenv("GITHUB_ACTOR")
-	ctx.Job = c.getenv("GITHUB_JOB")
-
-	runNumber, err := strconv.Atoi(c.getenv("GITHUB_RUN_NUMBER"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert GITHUB_RUN_NUMBER to an integer")
-	}
-	ctx.RunNumber = runNumber
-
-	runID, err := strconv.Atoi(c.getenv("GITHUB_RUN_ID"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert GITHUB_RUN_ID to an integer")
-	}
-	ctx.RunID = runID
-
-	ctx.APIURL = "https://api.github.com"
-	if val := c.Getenv("GITHUB_API_URL"); val != "" {
-		ctx.APIURL = val
-	}
-
-	ctx.ServerURL = "https://github.com"
-	if val := c.Getenv("GITHUB_SERVER_URL"); val != "" {
-		ctx.ServerURL = val
-	}
-
-	ctx.GraphqlURL = "https://api.github.com/graphql"
-	if val := c.Getenv("GITHUB_GRAPHQL_URL"); val != "" {
-		ctx.GraphqlURL = val
-	}
-
-	return ctx, nil
+	return &githubCtx, nil
 }
