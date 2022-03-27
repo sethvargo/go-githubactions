@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -449,3 +450,77 @@ func (c *Action) Getenv(key string) string {
 // GetenvFunc is an abstraction to make tests feasible for commands that
 // interact with environment variables.
 type GetenvFunc func(key string) string
+
+// Context of current workflow
+type Context struct {
+	Event      map[string]interface{}
+	EventName  string
+	SHA        string
+	Ref        string
+	Workflow   string
+	Action     string
+	Actor      string
+	Job        string
+	RunNumber  int
+	RunID      int
+	APIURL     string
+	ServerURL  string
+	GraphqlURL string
+}
+
+// Context returns the context of current action with the payload object that triggered the workflow
+func (c *Action) Context() (*Context, error) {
+	var rawEvent map[string]interface{}
+
+	eventPath := c.Getenv("GITHUB_EVENT_PATH")
+	if eventPath == "" {
+		return nil, fmt.Errorf("missing GITHUB_EVENT_PATH in environment")
+	}
+
+	eventData, err := ioutil.ReadFile(eventPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read event file: %w", err)
+	}
+
+	if err = json.Unmarshal(eventData, &rawEvent); err != nil {
+		return nil, fmt.Errorf("could not unmarshall event payload: %w", err)
+	}
+
+	ctx := &Context{Event: rawEvent}
+	ctx.EventName = c.getenv("GITHUB_EVENT_NAME")
+	ctx.SHA = c.getenv("GITHUB_SHA")
+	ctx.Ref = c.getenv("GITHUB_REF")
+	ctx.Workflow = c.getenv("GITHUB_WORKFLOW")
+	ctx.Action = c.getenv("GITHUB_ACTION")
+	ctx.Actor = c.getenv("GITHUB_ACTOR")
+	ctx.Job = c.getenv("GITHUB_JOB")
+
+	runNumber, err := strconv.Atoi(c.getenv("GITHUB_RUN_NUMBER"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert GITHUB_RUN_NUMBER to an integer")
+	}
+	ctx.RunNumber = runNumber
+
+	runID, err := strconv.Atoi(c.getenv("GITHUB_RUN_ID"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert GITHUB_RUN_ID to an integer")
+	}
+	ctx.RunID = runID
+
+	ctx.APIURL = "https://api.github.com"
+	if val := c.Getenv("GITHUB_API_URL"); val != "" {
+		ctx.APIURL = val
+	}
+
+	ctx.ServerURL = "https://github.com"
+	if val := c.Getenv("GITHUB_SERVER_URL"); val != "" {
+		ctx.ServerURL = val
+	}
+
+	ctx.GraphqlURL = "https://api.github.com/graphql"
+	if val := c.Getenv("GITHUB_GRAPHQL_URL"); val != "" {
+		ctx.GraphqlURL = val
+	}
+
+	return ctx, nil
+}
