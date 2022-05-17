@@ -26,8 +26,8 @@ func IssueCommand(cmd *Command) {
 }
 
 // IssueFileCommand issues a new GitHub actions Command using environment files.
-func IssueFileCommand(cmd *Command) error {
-	return defaultAction.IssueFileCommand(cmd)
+func IssueFileCommand(cmd *Command) {
+	defaultAction.IssueFileCommand(cmd)
 }
 
 // AddMask adds a new field mask for the given string "p". After called, future
