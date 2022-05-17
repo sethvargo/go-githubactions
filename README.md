@@ -62,7 +62,7 @@ By default, GitHub Actions expects actions to be written in Node.js. For other l
 
 ```dockerfile
 # your-repo/Dockerfile
-FROM golang:1.17
+FROM golang:1.18
 RUN go build -o /bin/app .
 ENTRYPOINT ["/bin/app"]
 ```
@@ -100,7 +100,7 @@ steps:
 Now we can precompile and publish our Go Action as a Docker container, but we need to make it much, much smaller first. This can be achieved using multi-stage Docker builds:
 
 ```dockerfile
-FROM golang:1.17 AS builder
+FROM golang:1.18 AS builder
 
 ENV GO111MODULE=on \
   CGO_ENABLED=0 \
@@ -114,10 +114,7 @@ WORKDIR /src
 COPY . .
 
 RUN go build \
-  -a \
   -ldflags "-s -w -extldflags '-static'" \
-  -installsuffix cgo \
-  -tags netgo \
   -o /bin/app \
   . \
   && strip /bin/app \
@@ -139,7 +136,8 @@ ENTRYPOINT ["/app"]
 
 The first step, uses a fat container to build, strip, and compress the compiled Go binary. Then, in the second step, the compiled and compressed binary is copied into a scratch (bare) container along with some SSL certificates and a `nobody` user in which to execute the container.
 
-This will usually produce an image that is < 10MB in size, making for much faster builds.
+This will usually produce an image that is less than 10MB in size, making for
+much faster builds.
 
 
 [gh-actions]: https://github.com/features/actions
