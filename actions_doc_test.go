@@ -38,6 +38,49 @@ func ExampleAction_AddPath() {
 	a.AddPath("/tmp/myapp")
 }
 
+func ExampleAction_GetInput() {
+	a := githubactions.New()
+	a.GetInput("foo")
+}
+
+func ExampleAction_Group() {
+	a := githubactions.New()
+	a.Group("My group")
+}
+
+func ExampleAction_EndGroup() {
+	a := githubactions.New()
+	a.Group("My group")
+
+	// work
+
+	a.EndGroup()
+}
+
+func ExampleAction_AddStepSummary() {
+	a := githubactions.New()
+	a.AddStepSummary(`
+## Heading
+
+- :rocket:
+- :moon:
+`)
+}
+
+func ExampleAction_AddStepSummaryTemplate() {
+	a := githubactions.New()
+	if err := a.AddStepSummaryTemplate(`
+## Heading
+
+- {{.Input}}
+- :moon:
+`, map[string]string{
+		"Input": ":rocket:",
+	}); err != nil {
+		// handle error
+	}
+}
+
 func ExampleAction_Debugf() {
 	a := githubactions.New()
 	a.Debugf("a debug message")

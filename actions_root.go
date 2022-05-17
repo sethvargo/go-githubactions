@@ -14,7 +14,9 @@
 
 package githubactions
 
-import "context"
+import (
+	"context"
+)
 
 var (
 	defaultAction = New()
@@ -71,6 +73,21 @@ func EndGroup() {
 	defaultAction.EndGroup()
 }
 
+// AddStepSummary writes the given markdown to the job summary. If a job summary
+// already exists, this value is appended.
+func AddStepSummary(markdown string) {
+	defaultAction.AddStepSummary(markdown)
+}
+
+// AddStepSummaryTemplate adds a summary template by parsing the given Go
+// template using html/template with the given input data. See AddStepSummary
+// for caveats.
+//
+// This primarily exists as a convenience function that renders a template.
+func AddStepSummaryTemplate(tmpl string, data any) error {
+	return defaultAction.AddStepSummaryTemplate(tmpl, data)
+}
+
 // SetEnv sets an environment variable.
 func SetEnv(k, v string) {
 	defaultAction.SetEnv(k, v)
@@ -83,31 +100,31 @@ func SetOutput(k, v string) {
 
 // Debugf prints a debug-level message. The arguments follow the standard Printf
 // arguments.
-func Debugf(msg string, args ...interface{}) {
+func Debugf(msg string, args ...any) {
 	defaultAction.Debugf(msg, args...)
 }
 
 // Errorf prints a error-level message. The arguments follow the standard Printf
 // arguments.
-func Errorf(msg string, args ...interface{}) {
+func Errorf(msg string, args ...any) {
 	defaultAction.Errorf(msg, args...)
 }
 
 // Fatalf prints a error-level message and exits. This is equivalent to Errorf
 // followed by os.Exit(1).
-func Fatalf(msg string, args ...interface{}) {
+func Fatalf(msg string, args ...any) {
 	defaultAction.Fatalf(msg, args...)
 }
 
 // Infof prints a info-level message. The arguments follow the standard Printf
 // arguments.
-func Infof(msg string, args ...interface{}) {
+func Infof(msg string, args ...any) {
 	defaultAction.Infof(msg, args...)
 }
 
 // Warningf prints a warning-level message. The arguments follow the standard
 // Printf arguments.
-func Warningf(msg string, args ...interface{}) {
+func Warningf(msg string, args ...any) {
 	defaultAction.Warningf(msg, args...)
 }
 

@@ -144,8 +144,6 @@ func TestAction_RemoveMatcher(t *testing.T) {
 func TestAction_AddPath(t *testing.T) {
 	t.Parallel()
 
-	const envGitHubPath = "GITHUB_PATH"
-
 	// expect a file command to be issued when env file is set.
 	file, err := os.CreateTemp("", "")
 	if err != nil {
@@ -153,7 +151,7 @@ func TestAction_AddPath(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubPath, file.Name())
+	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_PATH", file.Name())
 	var b bytes.Buffer
 	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
 
@@ -227,10 +225,8 @@ func TestAction_EndGroup(t *testing.T) {
 	}
 }
 
-func TestAction_SetEnv(t *testing.T) {
+func TestAction_AddStepSummary(t *testing.T) {
 	t.Parallel()
-
-	const envGitHubEnv = "GITHUB_ENV"
 
 	// expectations for env file env commands
 	var b bytes.Buffer
@@ -240,7 +236,85 @@ func TestAction_SetEnv(t *testing.T) {
 	}
 
 	defer os.Remove(file.Name())
-	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubEnv, file.Name())
+	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_STEP_SUMMARY", file.Name())
+	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
+	a.AddStepSummary(`
+## This is
+
+some markdown
+`)
+	a.AddStepSummary(`
+- content
+`)
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the command to be written to the file.
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Errorf("unable to read temp summary file: %s", err)
+	}
+
+	want := "\n## This is\n\nsome markdown\n" + EOF + "\n- content\n" + EOF
+	if got := string(data); got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+func TestAction_AddStepSummaryTemplate(t *testing.T) {
+	t.Parallel()
+
+	// expectations for env file env commands
+	var b bytes.Buffer
+	file, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+
+	defer os.Remove(file.Name())
+	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_STEP_SUMMARY", file.Name())
+	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
+	a.AddStepSummaryTemplate(`
+## This is
+
+{{.Input}}
+- content
+`, map[string]string{
+		"Input": "some markdown",
+	})
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the command to be written to the file.
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Errorf("unable to read temp summary file: %s", err)
+	}
+
+	want := "\n## This is\n\nsome markdown\n- content\n" + EOF
+	if got := string(data); got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+}
+
+func TestAction_SetEnv(t *testing.T) {
+	t.Parallel()
+
+	// expectations for env file env commands
+	var b bytes.Buffer
+	file, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+
+	defer os.Remove(file.Name())
+	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_ENV", file.Name())
 	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
 	a.SetEnv("key", "value")
 	a.SetEnv("key2", "value2")
