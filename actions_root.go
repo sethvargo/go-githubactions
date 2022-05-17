@@ -144,3 +144,7 @@ func WithFieldsMap(m map[string]string) *Action {
 func GetIDToken(ctx context.Context, audience string) (string, error) {
 	return defaultAction.GetIDToken(ctx, audience)
 }
+
+func Context() (*GitHubContext, error) {
+	return defaultAction.Context()
+}

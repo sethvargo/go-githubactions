@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -453,43 +452,63 @@ func (c *Action) Getenv(key string) string {
 // interact with environment variables.
 type GetenvFunc func(key string) string
 
-// Context of current workflow
-type Context struct {
-	Event            map[string]interface{}
-	EventPayloadPath string `env:"GITHUB_EVENT_PATH,required"`
-	EventName        string `env:"GITHUB_EVENT_NAME"`
-	SHA              string `env:"GITHUB_SHA"`
-	Ref              string `env:"GITHUB_REF"`
-	Workflow         string `env:"GITHUB_WORKFLOW"`
-	Action           string `env:"GITHUB_ACTION"`
-	Actor            string `env:"GITHUB_ACTOR"`
-	Job              string `env:"GITHUB_JOB"`
-	RunNumber        int    `env:"GITHUB_RUN_NUMBER"`
-	RunID            int    `env:"GITHUB_RUN_ID"`
-	APIURL           string `env:"GITHUB_API_URL,default=https://api.github.com"`
-	ServerURL        string `env:"GITHUB_SERVER_URL,default=https://github.com"`
-	GraphqlURL       string `env:"GITHUB_GRAPHQL_URL,default=https://api.github.com/graphql"`
+// GitHubContext of current workflow.
+//
+// Replicated from https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
+type GitHubContext struct {
+	EventPath  string `env:"GITHUB_EVENT_PATH"`
+	EventName  string `env:"GITHUB_EVENT_NAME"`
+	SHA        string `env:"GITHUB_SHA"`
+	Ref        string `env:"GITHUB_REF"`
+	Workflow   string `env:"GITHUB_WORKFLOW"`
+	Action     string `env:"GITHUB_ACTION"`
+	Actor      string `env:"GITHUB_ACTOR"`
+	Job        string `env:"GITHUB_JOB"`
+	RunNumber  int64  `env:"GITHUB_RUN_NUMBER"`
+	RunID      int64  `env:"GITHUB_RUN_ID"`
+	APIURL     string `env:"GITHUB_API_URL,default=https://api.github.com"`
+	ServerURL  string `env:"GITHUB_SERVER_URL,default=https://github.com"`
+	GraphqlURL string `env:"GITHUB_GRAPHQL_URL,default=https://api.github.com/graphql"`
+
+	// Event is populated by parsing the file at EventPath, if it exists.
+	Event map[string]any
 }
 
-// Context returns the context of current action with the payload object that triggered the workflow
-func (c *Action) Context(ctx context.Context) (*Context, error) {
-	var (
-		rawEvent  map[string]interface{}
-		githubCtx Context
-	)
+// Context returns the context of current action with the payload object
+// that triggered the workflow
+func (c *Action) Context() (*GitHubContext, error) {
+	ctx := context.Background()
+	lookuper := &wrappedLookuper{f: c.getenv}
 
-	if err := envconfig.Process(ctx, &githubCtx); err != nil {
-		return nil, fmt.Errorf("could not process context variables: %w", err)
+	var githubContext GitHubContext
+	if err := envconfig.ProcessWith(ctx, &githubContext, lookuper); err != nil {
+		return nil, fmt.Errorf("could not process github context variables: %w", err)
 	}
 
-	eventData, err := ioutil.ReadFile(githubCtx.EventPayloadPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not read event file: %w", err)
+	if githubContext.EventPath != "" {
+		eventData, err := os.ReadFile(githubContext.EventPath)
+		if err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("could not read event file: %w", err)
+		}
+		if eventData != nil {
+			if err := json.Unmarshal(eventData, &githubContext.Event); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal event payload: %w", err)
+			}
+		}
 	}
 
-	if err = json.Unmarshal(eventData, &rawEvent); err != nil {
-		return nil, fmt.Errorf("could not unmarshall event payload: %w", err)
-	}
+	return &githubContext, nil
+}
 
-	return &githubCtx, nil
+// wrappedLookuper creates a lookuper that wraps a given getenv func.
+type wrappedLookuper struct {
+	f GetenvFunc
+}
+
+// Lookup implements a custom lookuper.
+func (w *wrappedLookuper) Lookup(key string) (string, bool) {
+	if v := w.f(key); v != "" {
+		return v, true
+	}
+	return "", false
 }
