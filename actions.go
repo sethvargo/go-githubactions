@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"net/url"
@@ -51,6 +52,8 @@ const (
 
 	groupCmd    = "group"
 	endGroupCmd = "endgroup"
+
+	stepSummaryCmd = "step-summary"
 
 	debugCmd   = "debug"
 	noticeCmd  = "notice"
@@ -230,6 +233,38 @@ func (c *Action) EndGroup() {
 	})
 }
 
+// AddStepSummary writes the given markdown to the job summary. If a job summary
+// already exists, this value is appended.
+//
+// https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-job-summary
+// https://github.blog/2022-05-09-supercharging-github-actions-with-job-summaries/
+func (c *Action) AddStepSummary(markdown string) {
+	c.IssueFileCommand(&Command{
+		Name:    stepSummaryCmd,
+		Message: markdown,
+	})
+}
+
+// AddStepSummaryTemplate adds a summary template by parsing the given Go
+// template using html/template with the given input data. See AddStepSummary
+// for caveats.
+//
+// This primarily exists as a convenience function that renders a template.
+func (c *Action) AddStepSummaryTemplate(tmpl string, data any) error {
+	t, err := template.New("").Parse(tmpl)
+	if err != nil {
+		return fmt.Errorf("failed to parse template: %w", err)
+	}
+
+	var b bytes.Buffer
+	if err := t.Execute(&b, data); err != nil {
+		return fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	c.AddStepSummary(b.String())
+	return nil
+}
+
 // SetEnv sets an environment variable. It panics if it cannot write to the
 // output file.
 //
@@ -258,7 +293,7 @@ func (c *Action) SetOutput(k, v string) {
 // Debugf prints a debug-level message. It follows the standard fmt.Printf
 // arguments, appending an OS-specific line break to the end of the message. It
 // panics if it cannot write to the output stream.
-func (c *Action) Debugf(msg string, args ...interface{}) {
+func (c *Action) Debugf(msg string, args ...any) {
 	// ::debug <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
 		Name:       debugCmd,
@@ -270,7 +305,7 @@ func (c *Action) Debugf(msg string, args ...interface{}) {
 // Noticef prints a notice-level message. It follows the standard fmt.Printf
 // arguments, appending an OS-specific line break to the end of the message. It
 // panics if it cannot write to the output stream.
-func (c *Action) Noticef(msg string, args ...interface{}) {
+func (c *Action) Noticef(msg string, args ...any) {
 	// ::notice <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
 		Name:       noticeCmd,
@@ -282,7 +317,7 @@ func (c *Action) Noticef(msg string, args ...interface{}) {
 // Warningf prints a warning-level message. It follows the standard fmt.Printf
 // arguments, appending an OS-specific line break to the end of the message. It
 // panics if it cannot write to the output stream.
-func (c *Action) Warningf(msg string, args ...interface{}) {
+func (c *Action) Warningf(msg string, args ...any) {
 	// ::warning <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
 		Name:       warningCmd,
@@ -294,7 +329,7 @@ func (c *Action) Warningf(msg string, args ...interface{}) {
 // Errorf prints a error-level message. It follows the standard fmt.Printf
 // arguments, appending an OS-specific line break to the end of the message. It
 // panics if it cannot write to the output stream.
-func (c *Action) Errorf(msg string, args ...interface{}) {
+func (c *Action) Errorf(msg string, args ...any) {
 	// ::error <c.fields>::<msg, args>
 	c.IssueCommand(&Command{
 		Name:       errorCmd,
@@ -305,7 +340,7 @@ func (c *Action) Errorf(msg string, args ...interface{}) {
 
 // Fatalf prints a error-level message and exits. This is equivalent to Errorf
 // followed by os.Exit(1).
-func (c *Action) Fatalf(msg string, args ...interface{}) {
+func (c *Action) Fatalf(msg string, args ...any) {
 	c.Errorf(msg, args...)
 	osExit(1)
 }
@@ -313,7 +348,7 @@ func (c *Action) Fatalf(msg string, args ...interface{}) {
 // Infof prints message to stdout without any level annotations. It follows the
 // standard fmt.Printf arguments, appending an OS-specific line break to the end
 // of the message. It panics if it cannot write to the output stream.
-func (c *Action) Infof(msg string, args ...interface{}) {
+func (c *Action) Infof(msg string, args ...any) {
 	if _, err := fmt.Fprintf(c.w, msg+EOF, args...); err != nil {
 		panic(fmt.Errorf("failed to write info command: %w", err))
 	}
