@@ -25,6 +25,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestNew(t *testing.T) {
@@ -586,6 +588,113 @@ func TestAction_GetIDToken(t *testing.T) {
 
 			if got, want := result, tc.expResp; got != want {
 				t.Errorf("expected %q to be %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAction_Context(t *testing.T) {
+	t.Parallel()
+
+	f, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		os.Remove(f.Name())
+	})
+
+	if _, err := f.Write([]byte(`{"foo": "bar"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	eventPayloadPath := f.Name()
+
+	cases := []struct {
+		name string
+		env  map[string]string
+		exp  *GitHubContext
+	}{
+		{
+			name: "empty",
+			env:  nil,
+			exp: &GitHubContext{
+				// Defaults
+				APIURL:     "https://api.github.com",
+				ServerURL:  "https://github.com",
+				GraphqlURL: "https://api.github.com/graphql",
+			},
+		},
+		{
+			name: "no_payload",
+			env: map[string]string{
+				"GITHUB_EVENT_NAME":  "event_name",
+				"GITHUB_SHA":         "abcd1234",
+				"GITHUB_REF":         "main",
+				"GITHUB_WORKFLOW":    "test",
+				"GITHUB_ACTION":      "foo/bar@v0",
+				"GITHUB_ACTOR":       "sethvargo",
+				"GITHUB_JOB":         "12",
+				"GITHUB_RUN_NUMBER":  "34",
+				"GITHUB_RUN_ID":      "56",
+				"GITHUB_API_URL":     "https://foo.com",
+				"GITHUB_SERVER_URL":  "https://bar.com",
+				"GITHUB_GRAPHQL_URL": "https://baz.com",
+			},
+			exp: &GitHubContext{
+				EventName:  "event_name",
+				SHA:        "abcd1234",
+				Ref:        "main",
+				Workflow:   "test",
+				Action:     "foo/bar@v0",
+				Actor:      "sethvargo",
+				Job:        "12",
+				RunNumber:  34,
+				RunID:      56,
+				APIURL:     "https://foo.com",
+				ServerURL:  "https://bar.com",
+				GraphqlURL: "https://baz.com",
+			},
+		},
+		{
+			name: "payload",
+			env: map[string]string{
+				"GITHUB_EVENT_PATH": eventPayloadPath,
+			},
+			exp: &GitHubContext{
+				EventPath: eventPayloadPath,
+
+				// Defaults
+				APIURL:     "https://api.github.com",
+				ServerURL:  "https://github.com",
+				GraphqlURL: "https://api.github.com/graphql",
+
+				Event: map[string]any{
+					"foo": "bar",
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			a := New(WithGetenv(func(k string) string {
+				return tc.env[k]
+			}))
+			got, err := a.Context()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if diff := cmp.Diff(tc.exp, got); diff != "" {
+				t.Fatalf("mismatch (-want, +got):\n%s", diff)
 			}
 		})
 	}

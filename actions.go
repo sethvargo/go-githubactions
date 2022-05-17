@@ -29,6 +29,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/sethvargo/go-envconfig"
 )
 
 var (
@@ -449,3 +451,64 @@ func (c *Action) Getenv(key string) string {
 // GetenvFunc is an abstraction to make tests feasible for commands that
 // interact with environment variables.
 type GetenvFunc func(key string) string
+
+// GitHubContext of current workflow.
+//
+// Replicated from https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
+type GitHubContext struct {
+	EventPath  string `env:"GITHUB_EVENT_PATH"`
+	EventName  string `env:"GITHUB_EVENT_NAME"`
+	SHA        string `env:"GITHUB_SHA"`
+	Ref        string `env:"GITHUB_REF"`
+	Workflow   string `env:"GITHUB_WORKFLOW"`
+	Action     string `env:"GITHUB_ACTION"`
+	Actor      string `env:"GITHUB_ACTOR"`
+	Job        string `env:"GITHUB_JOB"`
+	RunNumber  int64  `env:"GITHUB_RUN_NUMBER"`
+	RunID      int64  `env:"GITHUB_RUN_ID"`
+	APIURL     string `env:"GITHUB_API_URL,default=https://api.github.com"`
+	ServerURL  string `env:"GITHUB_SERVER_URL,default=https://github.com"`
+	GraphqlURL string `env:"GITHUB_GRAPHQL_URL,default=https://api.github.com/graphql"`
+
+	// Event is populated by parsing the file at EventPath, if it exists.
+	Event map[string]any
+}
+
+// Context returns the context of current action with the payload object
+// that triggered the workflow
+func (c *Action) Context() (*GitHubContext, error) {
+	ctx := context.Background()
+	lookuper := &wrappedLookuper{f: c.getenv}
+
+	var githubContext GitHubContext
+	if err := envconfig.ProcessWith(ctx, &githubContext, lookuper); err != nil {
+		return nil, fmt.Errorf("could not process github context variables: %w", err)
+	}
+
+	if githubContext.EventPath != "" {
+		eventData, err := os.ReadFile(githubContext.EventPath)
+		if err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("could not read event file: %w", err)
+		}
+		if eventData != nil {
+			if err := json.Unmarshal(eventData, &githubContext.Event); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal event payload: %w", err)
+			}
+		}
+	}
+
+	return &githubContext, nil
+}
+
+// wrappedLookuper creates a lookuper that wraps a given getenv func.
+type wrappedLookuper struct {
+	f GetenvFunc
+}
+
+// Lookup implements a custom lookuper.
+func (w *wrappedLookuper) Lookup(key string) (string, bool) {
+	if v := w.f(key); v != "" {
+		return v, true
+	}
+	return "", false
+}
