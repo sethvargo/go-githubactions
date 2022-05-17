@@ -53,22 +53,6 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestNewWithWriter(t *testing.T) {
-	t.Parallel()
-
-	var b bytes.Buffer
-	a := NewWithWriter(&b)
-
-	a.IssueCommand(&Command{
-		Name:    "foo",
-		Message: "bar",
-	})
-
-	if got, want := b.String(), "::foo::bar"+EOF; got != want {
-		t.Errorf("expected %q to be %q", got, want)
-	}
-}
-
 func TestAction_IssueCommand(t *testing.T) {
 	t.Parallel()
 
@@ -87,7 +71,7 @@ func TestAction_IssueCommand(t *testing.T) {
 func TestAction_IssueFileCommand(t *testing.T) {
 	t.Parallel()
 
-	file, err := ioutil.TempFile(".", ".issue_file_cmd_test_")
+	file, err := ioutil.TempFile("", "")
 	if err != nil {
 		t.Fatalf("unable to create a temp env file: %s", err)
 	}
@@ -98,12 +82,10 @@ func TestAction_IssueFileCommand(t *testing.T) {
 	var b bytes.Buffer
 	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
 
-	err = a.IssueFileCommand(&Command{
+	if err := a.issueFileCommand(&Command{
 		Name:    "foo",
 		Message: "bar",
-	})
-
-	if err != nil {
+	}); err != nil {
 		t.Errorf("expected nil error, got: %s", err)
 	}
 
@@ -164,27 +146,16 @@ func TestAction_AddPath(t *testing.T) {
 
 	const envGitHubPath = "GITHUB_PATH"
 
-	// expect a regular command to be issued when env file is not set.
-	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubPath, "")
-	var b bytes.Buffer
-	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
-
-	a.AddPath("/custom/bin")
-	if got, want := b.String(), "::add-path::/custom/bin"+EOF; got != want {
-		t.Errorf("expected %q to be %q", got, want)
-	}
-
-	b.Reset()
-
 	// expect a file command to be issued when env file is set.
-	file, err := ioutil.TempFile(".", ".add_path_test_")
+	file, err := ioutil.TempFile("", "")
 	if err != nil {
 		t.Fatalf("unable to create a temp env file: %s", err)
 	}
-
 	defer os.Remove(file.Name())
-	fakeGetenvFunc = newFakeGetenvFunc(t, envGitHubPath, file.Name())
-	WithGetenv(fakeGetenvFunc)(a)
+
+	fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubPath, file.Name())
+	var b bytes.Buffer
+	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
 
 	a.AddPath("/custom/bin")
 
@@ -261,27 +232,9 @@ func TestAction_SetEnv(t *testing.T) {
 
 	const envGitHubEnv = "GITHUB_ENV"
 
-	// expectations for regular set-env commands
-	checks := []struct {
-		key, value, want string
-	}{
-		{"key", "value", "::set-env name=key::value" + EOF},
-		{"key", "this is 100% a special\n\r value!", "::set-env name=key::this is 100%25 a special%0A%0D value!" + EOF},
-	}
-
-	for _, check := range checks {
-		fakeGetenvFunc := newFakeGetenvFunc(t, envGitHubEnv, "")
-		var b bytes.Buffer
-		a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
-		a.SetEnv(check.key, check.value)
-		if got, want := b.String(), check.want; got != want {
-			t.Errorf("SetEnv(%q, %q): expected %q; got %q", check.key, check.value, want, got)
-		}
-	}
-
 	// expectations for env file env commands
 	var b bytes.Buffer
-	file, err := ioutil.TempFile(".", ".set_env_test_")
+	file, err := ioutil.TempFile("", "")
 	if err != nil {
 		t.Fatalf("unable to create a temp env file: %s", err)
 	}
