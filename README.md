@@ -58,6 +58,12 @@ For more examples and API documentation, please see the [Go docs][godoc].
 
 ## Publishing
 
+There are multiple ways to publish GitHub Actions written in Go:
+
+-   [Composite actions](https://github.com/FerretDB/github-actions/blob/2ae30fd2cdb635d8aefdaf9f770257e156c9f77b/extract-docker-tag/action.yml)
+-   [Pre-compiled binaries with a shim](https://full-stack.blend.com/how-we-write-github-actions-in-go.html)
+-   Docker containers (see below)
+
 By default, GitHub Actions expects actions to be written in Node.js. For other languages like Go, you need to provide a `Dockerfile` and entrypoint instructions in an `action.yml` file:
 
 ```dockerfile
