@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -71,7 +71,7 @@ func TestAction_IssueCommand(t *testing.T) {
 func TestAction_IssueFileCommand(t *testing.T) {
 	t.Parallel()
 
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("unable to create a temp env file: %s", err)
 	}
@@ -95,7 +95,7 @@ func TestAction_IssueFileCommand(t *testing.T) {
 	}
 
 	// expect the message to be written to the env file
-	data, err := ioutil.ReadFile(file.Name())
+	data, err := os.ReadFile(file.Name())
 	if err != nil {
 		t.Errorf("unable to read temp env file: %s", err)
 	}
@@ -147,7 +147,7 @@ func TestAction_AddPath(t *testing.T) {
 	const envGitHubPath = "GITHUB_PATH"
 
 	// expect a file command to be issued when env file is set.
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("unable to create a temp env file: %s", err)
 	}
@@ -169,7 +169,7 @@ func TestAction_AddPath(t *testing.T) {
 	}
 
 	// expect the message to be written to the file.
-	data, err := ioutil.ReadAll(file)
+	data, err := io.ReadAll(file)
 	if err != nil {
 		t.Errorf("unable to read temp env file: %s", err)
 	}
@@ -234,7 +234,7 @@ func TestAction_SetEnv(t *testing.T) {
 
 	// expectations for env file env commands
 	var b bytes.Buffer
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("unable to create a temp env file: %s", err)
 	}
@@ -251,7 +251,7 @@ func TestAction_SetEnv(t *testing.T) {
 	}
 
 	// expect the command to be written to the file.
-	data, err := ioutil.ReadAll(file)
+	data, err := io.ReadAll(file)
 	if err != nil {
 		t.Errorf("unable to read temp env file: %s", err)
 	}

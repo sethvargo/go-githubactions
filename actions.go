@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -41,10 +40,8 @@ const (
 	setOutputCmd = "set-output"
 	saveStateCmd = "save-state"
 
-	addPathCmd = "add-path" // used when issuing the regular command
-	pathCmd    = "path"     // used when issuing the file command
+	pathCmd = "path" // used when issuing the file command
 
-	setEnvCmd       = "set-env"                          // used when issuing the regular command
 	envCmd          = "env"                              // used when issuing the file command
 	envCmdMsgFmt    = "%s<<%s" + EOF + "%s" + EOF + "%s" // ${name}<<${delimiter}${os.EOL}${convertedVal}${os.EOL}${delimiter}
 	envCmdDelimiter = "_GitHubActionsFileCommandDelimeter_"
@@ -391,7 +388,7 @@ func (c *Action) GetIDToken(ctx context.Context, audience string) (string, error
 
 	// This has moved to the io package in Go 1.16, but we still support up to Go
 	// 1.13 for now.
-	body, err := ioutil.ReadAll(io.LimitReader(resp.Body, 64*1000))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1000))
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
