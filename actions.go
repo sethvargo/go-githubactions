@@ -471,9 +471,13 @@ type GitHubContext struct {
 	GraphqlURL string `env:"GITHUB_GRAPHQL_URL,default=https://api.github.com/graphql"`
 
 	// Repository is the owner and repository name. For example, octocat/Hello-World
+	// It is not recommended to use this field to acquire the repository name
+	// but to use the Repo method instead.
 	Repository string `env:"GITHUB_REPOSITORY"`
 
 	// RepositoryOwner is the repository owner. For example, octocat
+	// It is not recommended to use this field to acquire the repository owner
+	// but to use the Repo method instead.
 	RepositoryOwner string `env:"GITHUB_REPOSITORY_OWNER"`
 
 	// Event is populated by parsing the file at EventPath, if it exists.
