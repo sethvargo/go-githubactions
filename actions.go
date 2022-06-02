@@ -459,7 +459,7 @@ type GitHubContext struct {
 	Action           string `env:"GITHUB_ACTION"`
 	ActionPath       string `env:"GITHUB_ACTION_PATH"`
 	ActionRepository string `env:"GITHUB_ACTION_REPOSITORY"`
-	Actions          string `env:"GITHUB_ACTIONS"`
+	Actions          bool   `env:"GITHUB_ACTIONS"`
 	Actor            string `env:"GITHUB_ACTOR"`
 	APIURL           string `env:"GITHUB_API_URL,default=https://api.github.com"`
 	BaseRef          string `env:"GITHUB_BASE_REF"`
@@ -472,7 +472,7 @@ type GitHubContext struct {
 	Path             string `env:"GITHUB_PATH"`
 	Ref              string `env:"GITHUB_REF"`
 	RefName          string `env:"GITHUB_REF_NAME"`
-	RefProtected     string `env:"GITHUB_REF_PROTECTED"`
+	RefProtected     bool   `env:"GITHUB_REF_PROTECTED"`
 	RefType          string `env:"GITHUB_REF_TYPE"`
 
 	// Repository is the owner and repository name. For example, octocat/Hello-World
