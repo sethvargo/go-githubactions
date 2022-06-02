@@ -631,32 +631,65 @@ func TestAction_Context(t *testing.T) {
 		{
 			name: "no_payload",
 			env: map[string]string{
-				"GITHUB_EVENT_NAME":  "event_name",
-				"GITHUB_SHA":         "abcd1234",
-				"GITHUB_REF":         "main",
-				"GITHUB_WORKFLOW":    "test",
-				"GITHUB_ACTION":      "foo/bar@v0",
-				"GITHUB_ACTOR":       "sethvargo",
-				"GITHUB_JOB":         "12",
-				"GITHUB_RUN_NUMBER":  "34",
-				"GITHUB_RUN_ID":      "56",
-				"GITHUB_API_URL":     "https://foo.com",
-				"GITHUB_SERVER_URL":  "https://bar.com",
-				"GITHUB_GRAPHQL_URL": "https://baz.com",
+				"GITHUB_ACTION":            "__repo-owner_name-of-action-repo",
+				"GITHUB_ACTION_PATH":       "/path/to/action",
+				"GITHUB_ACTION_REPOSITORY": "repo-owner/name-of-action-repo",
+				"GITHUB_ACTIONS":           "true",
+				"GITHUB_ACTOR":             "sethvargo",
+				"GITHUB_API_URL":           "https://foo.com",
+				"GITHUB_BASE_REF":          "main",
+				"GITHUB_ENV":               "/path/to/env",
+				"GITHUB_EVENT_NAME":        "event_name",
+				"GITHUB_HEAD_REF":          "headbranch",
+				"GITHUB_GRAPHQL_URL":       "https://baz.com",
+				"GITHUB_JOB":               "12",
+				"GITHUB_PATH":              "/path/to/path",
+				"GITHUB_REF":               "refs/tags/v1.0",
+				"GITHUB_REF_NAME":          "v1.0",
+				"GITHUB_REF_PROTECTED":     "true",
+				"GITHUB_REF_TYPE":          "tag",
+				"GITHUB_REPOSITORY":        "sethvargo/baz",
+				"GITHUB_REPOSITORY_OWNER":  "sethvargo",
+				"GITHUB_RETENTION_DAYS":    "90",
+				"GITHUB_RUN_ATTEMPT":       "6",
+				"GITHUB_RUN_ID":            "56",
+				"GITHUB_RUN_NUMBER":        "34",
+				"GITHUB_SERVER_URL":        "https://bar.com",
+				"GITHUB_SHA":               "abcd1234",
+				"GITHUB_STEP_SUMMARY":      "/path/to/summary",
+				"GITHUB_WORKFLOW":          "test",
+				"GITHUB_WORKSPACE":         "/path/to/workspace",
 			},
 			exp: &GitHubContext{
-				EventName:  "event_name",
-				SHA:        "abcd1234",
-				Ref:        "main",
-				Workflow:   "test",
-				Action:     "foo/bar@v0",
-				Actor:      "sethvargo",
-				Job:        "12",
-				RunNumber:  34,
-				RunID:      56,
-				APIURL:     "https://foo.com",
-				ServerURL:  "https://bar.com",
-				GraphqlURL: "https://baz.com",
+				Action:           "__repo-owner_name-of-action-repo",
+				ActionPath:       "/path/to/action",
+				ActionRepository: "repo-owner/name-of-action-repo",
+				Actions:          true,
+				Actor:            "sethvargo",
+				APIURL:           "https://foo.com",
+				BaseRef:          "main",
+				Env:              "/path/to/env",
+				EventName:        "event_name",
+				// NOTE: No EventPath
+				GraphqlURL:      "https://baz.com",
+				Job:             "12",
+				HeadRef:         "headbranch",
+				Path:            "/path/to/path",
+				Ref:             "refs/tags/v1.0",
+				RefName:         "v1.0",
+				RefProtected:    true,
+				RefType:         "tag",
+				Repository:      "sethvargo/baz",
+				RepositoryOwner: "sethvargo",
+				RetentionDays:   90,
+				RunAttempt:      6,
+				RunID:           56,
+				RunNumber:       34,
+				ServerURL:       "https://bar.com",
+				SHA:             "abcd1234",
+				StepSummary:     "/path/to/summary",
+				Workflow:        "test",
+				Workspace:       "/path/to/workspace",
 			},
 		},
 		{
@@ -695,6 +728,81 @@ func TestAction_Context(t *testing.T) {
 
 			if diff := cmp.Diff(tc.exp, got); diff != "" {
 				t.Fatalf("mismatch (-want, +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestGitHubContext_Repo(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		context  *GitHubContext
+		expOwner string
+		expRepo  string
+	}{
+		{
+			name:     "empty",
+			context:  &GitHubContext{},
+			expOwner: "",
+			expRepo:  "",
+		},
+		{
+			name: "GITHUB_REPOSITORY env",
+			context: &GitHubContext{
+				Repository: "sethvargo/foo",
+			},
+			expOwner: "sethvargo",
+			expRepo:  "foo",
+		},
+		{
+			name: "event",
+			context: &GitHubContext{
+				Event: map[string]any{
+					"repository": map[string]any{
+						"name": "foo",
+						"owner": map[string]any{
+							"name": "sethvargo",
+						},
+					},
+				},
+			},
+			expOwner: "sethvargo",
+			expRepo:  "foo",
+		},
+		{
+			name: "event invalid type",
+			context: &GitHubContext{
+				Event: map[string]any{
+					"repository": "sethvargo/foo",
+				},
+			},
+			expOwner: "",
+			expRepo:  "",
+		},
+		{
+			name: "owner fallback",
+			context: &GitHubContext{
+				RepositoryOwner: "sethvargo",
+			},
+			expOwner: "sethvargo",
+			expRepo:  "",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			owner, repo := tc.context.Repo()
+			if want, got := tc.expOwner, owner; want != got {
+				t.Errorf("unexpected owner, want: %q, got: %q", want, got)
+			}
+			if want, got := tc.expRepo, repo; want != got {
+				t.Errorf("unexpected repository, want: %q, got: %q", want, got)
 			}
 		})
 	}

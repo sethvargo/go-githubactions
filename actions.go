@@ -454,24 +454,83 @@ type GetenvFunc func(key string) string
 
 // GitHubContext of current workflow.
 //
-// Replicated from https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
+// See: https://docs.github.com/en/actions/learn-github-actions/environment-variables
 type GitHubContext struct {
-	EventPath  string `env:"GITHUB_EVENT_PATH"`
-	EventName  string `env:"GITHUB_EVENT_NAME"`
-	SHA        string `env:"GITHUB_SHA"`
-	Ref        string `env:"GITHUB_REF"`
-	Workflow   string `env:"GITHUB_WORKFLOW"`
-	Action     string `env:"GITHUB_ACTION"`
-	Actor      string `env:"GITHUB_ACTOR"`
-	Job        string `env:"GITHUB_JOB"`
-	RunNumber  int64  `env:"GITHUB_RUN_NUMBER"`
-	RunID      int64  `env:"GITHUB_RUN_ID"`
-	APIURL     string `env:"GITHUB_API_URL,default=https://api.github.com"`
-	ServerURL  string `env:"GITHUB_SERVER_URL,default=https://github.com"`
-	GraphqlURL string `env:"GITHUB_GRAPHQL_URL,default=https://api.github.com/graphql"`
+	Action           string `env:"GITHUB_ACTION"`
+	ActionPath       string `env:"GITHUB_ACTION_PATH"`
+	ActionRepository string `env:"GITHUB_ACTION_REPOSITORY"`
+	Actions          bool   `env:"GITHUB_ACTIONS"`
+	Actor            string `env:"GITHUB_ACTOR"`
+	APIURL           string `env:"GITHUB_API_URL,default=https://api.github.com"`
+	BaseRef          string `env:"GITHUB_BASE_REF"`
+	Env              string `env:"GITHUB_ENV"`
+	EventName        string `env:"GITHUB_EVENT_NAME"`
+	EventPath        string `env:"GITHUB_EVENT_PATH"`
+	GraphqlURL       string `env:"GITHUB_GRAPHQL_URL,default=https://api.github.com/graphql"`
+	HeadRef          string `env:"GITHUB_HEAD_REF"`
+	Job              string `env:"GITHUB_JOB"`
+	Path             string `env:"GITHUB_PATH"`
+	Ref              string `env:"GITHUB_REF"`
+	RefName          string `env:"GITHUB_REF_NAME"`
+	RefProtected     bool   `env:"GITHUB_REF_PROTECTED"`
+	RefType          string `env:"GITHUB_REF_TYPE"`
+
+	// Repository is the owner and repository name. For example, octocat/Hello-World
+	// It is not recommended to use this field to acquire the repository name
+	// but to use the Repo method instead.
+	Repository string `env:"GITHUB_REPOSITORY"`
+
+	// RepositoryOwner is the repository owner. For example, octocat
+	// It is not recommended to use this field to acquire the repository owner
+	// but to use the Repo method instead.
+	RepositoryOwner string `env:"GITHUB_REPOSITORY_OWNER"`
+
+	RetentionDays int64  `env:"GITHUB_RETENTION_DAYS"`
+	RunAttempt    int64  `env:"GITHUB_RUN_ATTEMPT"`
+	RunID         int64  `env:"GITHUB_RUN_ID"`
+	RunNumber     int64  `env:"GITHUB_RUN_NUMBER"`
+	ServerURL     string `env:"GITHUB_SERVER_URL,default=https://github.com"`
+	SHA           string `env:"GITHUB_SHA"`
+	StepSummary   string `env:"GITHUB_STEP_SUMMARY"`
+	Workflow      string `env:"GITHUB_WORKFLOW"`
+	Workspace     string `env:"GITHUB_WORKSPACE"`
 
 	// Event is populated by parsing the file at EventPath, if it exists.
 	Event map[string]any
+}
+
+// Repo returns the username of the repository owner and repository name.
+func (c *GitHubContext) Repo() (string, string) {
+	if c == nil {
+		return "", ""
+	}
+
+	// Based on https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
+	if c.Repository != "" {
+		parts := strings.SplitN(c.Repository, "/", 2)
+		if len(parts) == 1 {
+			return parts[0], ""
+		}
+		return parts[0], parts[1]
+	}
+
+	// If c.Repository is empty attempt to get the repo from the Event data.
+	var repoName string
+	// NOTE: differs from context.ts. Fall back to GITHUB_REPOSITORY_OWNER
+	ownerName := c.RepositoryOwner
+	if c.Event != nil {
+		if repo, ok := c.Event["repository"].(map[string]any); ok {
+			if name, ok := repo["name"].(string); ok {
+				repoName = name
+			}
+			if owner, ok := repo["owner"].(map[string]any); ok {
+				if name, ok := owner["name"].(string); ok {
+					ownerName = name
+				}
+			}
+		}
+	}
+	return ownerName, repoName
 }
 
 // Context returns the context of current action with the payload object
