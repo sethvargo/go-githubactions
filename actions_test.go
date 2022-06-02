@@ -631,32 +631,36 @@ func TestAction_Context(t *testing.T) {
 		{
 			name: "no_payload",
 			env: map[string]string{
-				"GITHUB_EVENT_NAME":  "event_name",
-				"GITHUB_SHA":         "abcd1234",
-				"GITHUB_REF":         "main",
-				"GITHUB_WORKFLOW":    "test",
-				"GITHUB_ACTION":      "foo/bar@v0",
-				"GITHUB_ACTOR":       "sethvargo",
-				"GITHUB_JOB":         "12",
-				"GITHUB_RUN_NUMBER":  "34",
-				"GITHUB_RUN_ID":      "56",
-				"GITHUB_API_URL":     "https://foo.com",
-				"GITHUB_SERVER_URL":  "https://bar.com",
-				"GITHUB_GRAPHQL_URL": "https://baz.com",
+				"GITHUB_EVENT_NAME":       "event_name",
+				"GITHUB_SHA":              "abcd1234",
+				"GITHUB_REF":              "main",
+				"GITHUB_WORKFLOW":         "test",
+				"GITHUB_ACTION":           "foo/bar@v0",
+				"GITHUB_REPOSITORY":       "sethvargo/baz",
+				"GITHUB_REPOSITORY_OWNER": "sethvargo",
+				"GITHUB_ACTOR":            "sethvargo",
+				"GITHUB_JOB":              "12",
+				"GITHUB_RUN_NUMBER":       "34",
+				"GITHUB_RUN_ID":           "56",
+				"GITHUB_API_URL":          "https://foo.com",
+				"GITHUB_SERVER_URL":       "https://bar.com",
+				"GITHUB_GRAPHQL_URL":      "https://baz.com",
 			},
 			exp: &GitHubContext{
-				EventName:  "event_name",
-				SHA:        "abcd1234",
-				Ref:        "main",
-				Workflow:   "test",
-				Action:     "foo/bar@v0",
-				Actor:      "sethvargo",
-				Job:        "12",
-				RunNumber:  34,
-				RunID:      56,
-				APIURL:     "https://foo.com",
-				ServerURL:  "https://bar.com",
-				GraphqlURL: "https://baz.com",
+				EventName:       "event_name",
+				SHA:             "abcd1234",
+				Ref:             "main",
+				Workflow:        "test",
+				Action:          "foo/bar@v0",
+				Actor:           "sethvargo",
+				Job:             "12",
+				RunNumber:       34,
+				RunID:           56,
+				APIURL:          "https://foo.com",
+				ServerURL:       "https://bar.com",
+				GraphqlURL:      "https://baz.com",
+				Repository:      "sethvargo/baz",
+				RepositoryOwner: "sethvargo",
 			},
 		},
 		{
@@ -695,6 +699,81 @@ func TestAction_Context(t *testing.T) {
 
 			if diff := cmp.Diff(tc.exp, got); diff != "" {
 				t.Fatalf("mismatch (-want, +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestGitHubContext_Repo(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		context  *GitHubContext
+		expOwner string
+		expRepo  string
+	}{
+		{
+			name:     "empty",
+			context:  &GitHubContext{},
+			expOwner: "",
+			expRepo:  "",
+		},
+		{
+			name: "GITHUB_REPOSITORY env",
+			context: &GitHubContext{
+				Repository: "sethvargo/foo",
+			},
+			expOwner: "sethvargo",
+			expRepo:  "foo",
+		},
+		{
+			name: "event",
+			context: &GitHubContext{
+				Event: map[string]any{
+					"repository": map[string]any{
+						"name": "foo",
+						"owner": map[string]any{
+							"name": "sethvargo",
+						},
+					},
+				},
+			},
+			expOwner: "sethvargo",
+			expRepo:  "foo",
+		},
+		{
+			name: "event invalid type",
+			context: &GitHubContext{
+				Event: map[string]any{
+					"repository": "sethvargo/foo",
+				},
+			},
+			expOwner: "",
+			expRepo:  "",
+		},
+		{
+			name: "owner fallback",
+			context: &GitHubContext{
+				RepositoryOwner: "sethvargo",
+			},
+			expOwner: "sethvargo",
+			expRepo:  "",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			owner, repo := tc.context.Repo()
+			if want, got := tc.expOwner, owner; want != got {
+				t.Errorf("unexpected owner, want: %q, got: %q", want, got)
+			}
+			if want, got := tc.expRepo, repo; want != got {
+				t.Errorf("unexpected repository, want: %q, got: %q", want, got)
 			}
 		})
 	}

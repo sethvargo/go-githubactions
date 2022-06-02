@@ -470,8 +470,48 @@ type GitHubContext struct {
 	ServerURL  string `env:"GITHUB_SERVER_URL,default=https://github.com"`
 	GraphqlURL string `env:"GITHUB_GRAPHQL_URL,default=https://api.github.com/graphql"`
 
+	// Repository is the owner and repository name. For example, octocat/Hello-World
+	Repository string `env:"GITHUB_REPOSITORY"`
+
+	// RepositoryOwner is the repository owner. For example, octocat
+	RepositoryOwner string `env:"GITHUB_REPOSITORY_OWNER"`
+
 	// Event is populated by parsing the file at EventPath, if it exists.
 	Event map[string]any
+}
+
+// Repo returns the username of the repository owner and repository name.
+func (c *GitHubContext) Repo() (string, string) {
+	if c == nil {
+		return "", ""
+	}
+
+	// Based on https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
+	if c.Repository != "" {
+		parts := strings.SplitN(c.Repository, "/", 2)
+		if len(parts) == 1 {
+			return parts[0], ""
+		}
+		return parts[0], parts[1]
+	}
+
+	// If c.Repository is empty attempt to get the repo from the Event data.
+	var repoName string
+	// NOTE: differs from context.ts. Fall back to GITHUB_REPOSITORY_OWNER
+	ownerName := c.RepositoryOwner
+	if c.Event != nil {
+		if repo, ok := c.Event["repository"].(map[string]any); ok {
+			if name, ok := repo["name"].(string); ok {
+				repoName = name
+			}
+			if owner, ok := repo["owner"].(map[string]any); ok {
+				if name, ok := owner["name"].(string); ok {
+					ownerName = name
+				}
+			}
+		}
+	}
+	return ownerName, repoName
 }
 
 // Context returns the context of current action with the payload object
