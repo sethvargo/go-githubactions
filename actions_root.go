@@ -104,6 +104,12 @@ func Debugf(msg string, args ...any) {
 	defaultAction.Debugf(msg, args...)
 }
 
+// Noticef prints a notice-level message. The arguments follow the standard
+// Printf arguments.
+func Noticef(msg string, args ...any) {
+	defaultAction.Noticef(msg, args...)
+}
+
 // Errorf prints a error-level message. The arguments follow the standard Printf
 // arguments.
 func Errorf(msg string, args ...any) {
