@@ -183,10 +183,32 @@ func TestAction_SaveState(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := New(WithWriter(&b))
-	a.SaveState("key", "value")
+	file, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+	defer os.Remove(file.Name())
 
-	if got, want := b.String(), "::save-state name=key::value"+EOF; got != want {
+	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_STATE", file.Name())
+
+	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
+	a.SaveState("key", "value")
+	a.SaveState("key2", "value2")
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the command to be written to the file.
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Errorf("unable to read temp env file: %s", err)
+	}
+
+	want := "key<<_GitHubActionsFileCommandDelimeter_" + EOF + "value" + EOF + "_GitHubActionsFileCommandDelimeter_" + EOF
+	want += "key2<<_GitHubActionsFileCommandDelimeter_" + EOF + "value2" + EOF + "_GitHubActionsFileCommandDelimeter_" + EOF
+	if got := string(data); got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }
@@ -314,8 +336,8 @@ func TestAction_SetEnv(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to create a temp env file: %s", err)
 	}
-
 	defer os.Remove(file.Name())
+
 	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_ENV", file.Name())
 	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
 	a.SetEnv("key", "value")
@@ -343,10 +365,32 @@ func TestAction_SetOutput(t *testing.T) {
 	t.Parallel()
 
 	var b bytes.Buffer
-	a := New(WithWriter(&b))
-	a.SetOutput("key", "value")
+	file, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatalf("unable to create a temp env file: %s", err)
+	}
+	defer os.Remove(file.Name())
 
-	if got, want := b.String(), "::set-output name=key::value"+EOF; got != want {
+	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_OUTPUT", file.Name())
+
+	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
+	a.SetOutput("key", "value")
+	a.SetOutput("key2", "value2")
+
+	// expect an empty stdout buffer
+	if got, want := b.String(), ""; got != want {
+		t.Errorf("expected %q to be %q", got, want)
+	}
+
+	// expect the command to be written to the file.
+	data, err := io.ReadAll(file)
+	if err != nil {
+		t.Errorf("unable to read temp env file: %s", err)
+	}
+
+	want := "key<<_GitHubActionsFileCommandDelimeter_" + EOF + "value" + EOF + "_GitHubActionsFileCommandDelimeter_" + EOF
+	want += "key2<<_GitHubActionsFileCommandDelimeter_" + EOF + "value2" + EOF + "_GitHubActionsFileCommandDelimeter_" + EOF
+	if got := string(data); got != want {
 		t.Errorf("expected %q to be %q", got, want)
 	}
 }

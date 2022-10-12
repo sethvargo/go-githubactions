@@ -39,15 +39,16 @@ var (
 )
 
 const (
-	addMaskCmd   = "add-mask"
-	setOutputCmd = "set-output"
-	saveStateCmd = "save-state"
+	addMaskCmd = "add-mask"
 
-	pathCmd = "path" // used when issuing the file command
+	envCmd    = "env"
+	outputCmd = "output"
+	pathCmd   = "path"
+	stateCmd  = "state"
 
-	envCmd          = "env"                              // used when issuing the file command
-	envCmdMsgFmt    = "%s<<%s" + EOF + "%s" + EOF + "%s" // ${name}<<${delimiter}${os.EOL}${convertedVal}${os.EOL}${delimiter}
-	envCmdDelimiter = "_GitHubActionsFileCommandDelimeter_"
+	// https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+	multiLineFileDelim = "_GitHubActionsFileCommandDelimeter_"
+	multilineFileCmd   = "%s<<" + multiLineFileDelim + EOF + "%s" + EOF + multiLineFileDelim // ${name}<<${delimiter}${os.EOL}${convertedVal}${os.EOL}${delimiter}
 
 	addMatcherCmd    = "add-matcher"
 	removeMatcherCmd = "remove-matcher"
@@ -196,14 +197,15 @@ func (c *Action) AddPath(p string) {
 
 // SaveState saves state to be used in the "finally" post job entry point. It
 // panics if it cannot write to the output stream.
+//
+// On 2022-10-11, GitHub deprecated "::save-state name=<k>::<v>" in favor of
+// [environment files].
+//
+// [environment files]: https://github.blog/changelog/2022-10-11-github-actions-deprecating-save-state-and-set-output-commands/
 func (c *Action) SaveState(k, v string) {
-	// ::save-state name=<k>::<v>
-	c.IssueCommand(&Command{
-		Name:    saveStateCmd,
-		Message: v,
-		Properties: CommandProperties{
-			"name": k,
-		},
+	c.IssueFileCommand(&Command{
+		Name:    stateCmd,
+		Message: fmt.Sprintf(multilineFileCmd, k, v),
 	})
 }
 
@@ -275,20 +277,21 @@ func (c *Action) AddStepSummaryTemplate(tmpl string, data any) error {
 func (c *Action) SetEnv(k, v string) {
 	c.IssueFileCommand(&Command{
 		Name:    envCmd,
-		Message: fmt.Sprintf(envCmdMsgFmt, k, envCmdDelimiter, v, envCmdDelimiter),
+		Message: fmt.Sprintf(multilineFileCmd, k, v),
 	})
 }
 
 // SetOutput sets an output parameter. It panics if it cannot write to the
 // output stream.
+//
+// On 2022-10-11, GitHub deprecated "::set-output name=<k>::<v>" in favor of
+// [environment files].
+//
+// [environment files]: https://github.blog/changelog/2022-10-11-github-actions-deprecating-save-state-and-set-output-commands/
 func (c *Action) SetOutput(k, v string) {
-	// ::set-output name=<k>::<v>
-	c.IssueCommand(&Command{
-		Name:    setOutputCmd,
-		Message: v,
-		Properties: CommandProperties{
-			"name": k,
-		},
+	c.IssueFileCommand(&Command{
+		Name:    outputCmd,
+		Message: fmt.Sprintf(multilineFileCmd, k, v),
 	})
 }
 
