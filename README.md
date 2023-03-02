@@ -69,6 +69,8 @@ By default, GitHub Actions expects actions to be written in Node.js. For other l
 ```dockerfile
 # your-repo/Dockerfile
 FROM golang:1.18
+WORKDIR /src
+COPY . . 
 RUN go build -o /bin/app .
 ENTRYPOINT ["/bin/app"]
 ```
