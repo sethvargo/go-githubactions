@@ -540,10 +540,12 @@ func (c *GitHubContext) Repo() (string, string) {
 // that triggered the workflow
 func (c *Action) Context() (*GitHubContext, error) {
 	ctx := context.Background()
-	lookuper := &wrappedLookuper{f: c.getenv}
 
 	var githubContext GitHubContext
-	if err := envconfig.ProcessWith(ctx, &githubContext, lookuper); err != nil {
+	if err := envconfig.ProcessWith(ctx, &envconfig.Config{
+		Target:   &githubContext,
+		Lookuper: &wrappedLookuper{f: c.getenv},
+	}); err != nil {
 		return nil, fmt.Errorf("could not process github context variables: %w", err)
 	}
 
