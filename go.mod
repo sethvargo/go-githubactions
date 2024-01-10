@@ -14,9 +14,11 @@
 
 module github.com/sethvargo/go-githubactions
 
-go 1.18
+go 1.21
+
+toolchain go1.21.6
 
 require (
-	github.com/google/go-cmp v0.5.8
-	github.com/sethvargo/go-envconfig v0.8.0
+	github.com/google/go-cmp v0.6.0
+	github.com/sethvargo/go-envconfig v1.0.0
 )
