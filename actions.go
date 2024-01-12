@@ -21,16 +21,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
-
-	"github.com/sethvargo/go-envconfig"
 )
 
 var (
@@ -536,15 +536,130 @@ func (c *GitHubContext) Repo() (string, string) {
 	return ownerName, repoName
 }
 
+func parseBool(v string) (bool, error) {
+	if v == "" {
+		return false, nil
+	}
+	return strconv.ParseBool(v)
+}
+
+func parseInt(v string) (int64, error) {
+	if v == "" {
+		return 0, nil
+	}
+	return strconv.ParseInt(v, 10, 64)
+}
+
 // Context returns the context of current action with the payload object
 // that triggered the workflow
 func (c *Action) Context() (*GitHubContext, error) {
-	ctx := context.Background()
-	lookuper := &wrappedLookuper{f: c.getenv}
+	var merr error
+	githubContext := &GitHubContext{
+		APIURL:     "https://api.github.com",
+		GraphqlURL: "https://api.github.com/graphql",
+		ServerURL:  "https://github.com",
+	}
 
-	var githubContext GitHubContext
-	if err := envconfig.ProcessWith(ctx, &githubContext, lookuper); err != nil {
-		return nil, fmt.Errorf("could not process github context variables: %w", err)
+	if v := c.getenv("GITHUB_ACTION"); v != "" {
+		githubContext.Action = v
+	}
+	if v := c.getenv("GITHUB_ACTION_PATH"); v != "" {
+		githubContext.ActionPath = v
+	}
+	if v := c.getenv("GITHUB_ACTION_REPOSITORY"); v != "" {
+		githubContext.ActionRepository = v
+	}
+	if v, err := parseBool(c.getenv("GITHUB_ACTIONS")); err == nil {
+		githubContext.Actions = v
+	} else {
+		merr = errors.Join(merr, err)
+	}
+	if v := c.getenv("GITHUB_ACTOR"); v != "" {
+		githubContext.Actor = v
+	}
+	if v := c.getenv("GITHUB_API_URL"); v != "" {
+		githubContext.APIURL = v
+	}
+	if v := c.getenv("GITHUB_BASE_REF"); v != "" {
+		githubContext.BaseRef = v
+	}
+	if v := c.getenv("GITHUB_ENV"); v != "" {
+		githubContext.Env = v
+	}
+	if v := c.getenv("GITHUB_EVENT_NAME"); v != "" {
+		githubContext.EventName = v
+	}
+	if v := c.getenv("GITHUB_EVENT_PATH"); v != "" {
+		githubContext.EventPath = v
+	}
+	if v := c.getenv("GITHUB_GRAPHQL_URL"); v != "" {
+		githubContext.GraphqlURL = v
+	}
+	if v := c.getenv("GITHUB_HEAD_REF"); v != "" {
+		githubContext.HeadRef = v
+	}
+	if v := c.getenv("GITHUB_JOB"); v != "" {
+		githubContext.Job = v
+	}
+	if v := c.getenv("GITHUB_PATH"); v != "" {
+		githubContext.Path = v
+	}
+	if v := c.getenv("GITHUB_REF"); v != "" {
+		githubContext.Ref = v
+	}
+	if v := c.getenv("GITHUB_REF_NAME"); v != "" {
+		githubContext.RefName = v
+	}
+	if v, err := parseBool(c.getenv("GITHUB_REF_PROTECTED")); err == nil {
+		githubContext.RefProtected = v
+	} else {
+		merr = errors.Join(merr, err)
+	}
+	if v := c.getenv("GITHUB_REF_TYPE"); v != "" {
+		githubContext.RefType = v
+	}
+
+	if v := c.getenv("GITHUB_REPOSITORY"); v != "" {
+		githubContext.Repository = v
+	}
+	if v := c.getenv("GITHUB_REPOSITORY_OWNER"); v != "" {
+		githubContext.RepositoryOwner = v
+	}
+
+	if v, err := parseInt(c.getenv("GITHUB_RETENTION_DAYS")); err == nil {
+		githubContext.RetentionDays = v
+	} else {
+		merr = errors.Join(merr, err)
+	}
+	if v, err := parseInt(c.getenv("GITHUB_RUN_ATTEMPT")); err == nil {
+		githubContext.RunAttempt = v
+	} else {
+		merr = errors.Join(merr, err)
+	}
+	if v, err := parseInt(c.getenv("GITHUB_RUN_ID")); err == nil {
+		githubContext.RunID = v
+	} else {
+		merr = errors.Join(merr, err)
+	}
+	if v, err := parseInt(c.getenv("GITHUB_RUN_NUMBER")); err == nil {
+		githubContext.RunNumber = v
+	} else {
+		merr = errors.Join(merr, err)
+	}
+	if v := c.getenv("GITHUB_SERVER_URL"); v != "" {
+		githubContext.ServerURL = v
+	}
+	if v := c.getenv("GITHUB_SHA"); v != "" {
+		githubContext.SHA = v
+	}
+	if v := c.getenv("GITHUB_STEP_SUMMARY"); v != "" {
+		githubContext.StepSummary = v
+	}
+	if v := c.getenv("GITHUB_WORKFLOW"); v != "" {
+		githubContext.Workflow = v
+	}
+	if v := c.getenv("GITHUB_WORKSPACE"); v != "" {
+		githubContext.Workspace = v
 	}
 
 	if githubContext.EventPath != "" {
@@ -559,18 +674,5 @@ func (c *Action) Context() (*GitHubContext, error) {
 		}
 	}
 
-	return &githubContext, nil
-}
-
-// wrappedLookuper creates a lookuper that wraps a given getenv func.
-type wrappedLookuper struct {
-	f GetenvFunc
-}
-
-// Lookup implements a custom lookuper.
-func (w *wrappedLookuper) Lookup(key string) (string, bool) {
-	if v := w.f(key); v != "" {
-		return v, true
-	}
-	return "", false
+	return githubContext, merr
 }
