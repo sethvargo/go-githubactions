@@ -25,8 +25,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 func TestNew(t *testing.T) {
@@ -301,14 +299,16 @@ func TestAction_AddStepSummaryTemplate(t *testing.T) {
 	defer os.Remove(file.Name())
 	fakeGetenvFunc := newFakeGetenvFunc(t, "GITHUB_STEP_SUMMARY", file.Name())
 	a := New(WithWriter(&b), WithGetenv(fakeGetenvFunc))
-	a.AddStepSummaryTemplate(`
+	if err := a.AddStepSummaryTemplate(`
 ## This is
 
 {{.Input}}
 - content
 `, map[string]string{
 		"Input": "some markdown",
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 
 	// expect an empty stdout buffer
 	if got, want := b.String(), ""; got != want {
@@ -770,8 +770,8 @@ func TestAction_Context(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.exp, got); diff != "" {
-				t.Fatalf("mismatch (-want, +got):\n%s", diff)
+			if !reflect.DeepEqual(got, tc.exp) {
+				t.Errorf("expected\n\n%#v\n\nto be\n\n%#v\n", got, tc.exp)
 			}
 		})
 	}
