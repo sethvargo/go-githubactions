@@ -464,6 +464,7 @@ type GitHubContext struct {
 	ActionRepository string `env:"GITHUB_ACTION_REPOSITORY"`
 	Actions          bool   `env:"GITHUB_ACTIONS"`
 	Actor            string `env:"GITHUB_ACTOR"`
+	ActorID          string `env:"GITHUB_ACTOR_ID"`
 	APIURL           string `env:"GITHUB_API_URL,default=https://api.github.com"`
 	BaseRef          string `env:"GITHUB_BASE_REF"`
 	Env              string `env:"GITHUB_ENV"`
@@ -576,6 +577,9 @@ func (c *Action) Context() (*GitHubContext, error) {
 	}
 	if v := c.getenv("GITHUB_ACTOR"); v != "" {
 		githubContext.Actor = v
+	}
+	if v := c.getenv("GITHUB_ACTOR_ID"); v != "" {
+		githubContext.ActorID = v
 	}
 	if v := c.getenv("GITHUB_API_URL"); v != "" {
 		githubContext.APIURL = v
