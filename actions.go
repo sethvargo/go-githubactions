@@ -459,44 +459,45 @@ type GetenvFunc func(key string) string
 //
 // See: https://docs.github.com/en/actions/learn-github-actions/environment-variables
 type GitHubContext struct {
-	Action           string `env:"GITHUB_ACTION"`
-	ActionPath       string `env:"GITHUB_ACTION_PATH"`
-	ActionRepository string `env:"GITHUB_ACTION_REPOSITORY"`
-	Actions          bool   `env:"GITHUB_ACTIONS"`
-	Actor            string `env:"GITHUB_ACTOR"`
-	APIURL           string `env:"GITHUB_API_URL,default=https://api.github.com"`
-	BaseRef          string `env:"GITHUB_BASE_REF"`
-	Env              string `env:"GITHUB_ENV"`
-	EventName        string `env:"GITHUB_EVENT_NAME"`
-	EventPath        string `env:"GITHUB_EVENT_PATH"`
-	GraphqlURL       string `env:"GITHUB_GRAPHQL_URL,default=https://api.github.com/graphql"`
-	HeadRef          string `env:"GITHUB_HEAD_REF"`
-	Job              string `env:"GITHUB_JOB"`
-	Path             string `env:"GITHUB_PATH"`
-	Ref              string `env:"GITHUB_REF"`
-	RefName          string `env:"GITHUB_REF_NAME"`
-	RefProtected     bool   `env:"GITHUB_REF_PROTECTED"`
-	RefType          string `env:"GITHUB_REF_TYPE"`
+	Action           string
+	ActionPath       string
+	ActionRepository string
+	Actions          bool
+	Actor            string
+	ActorID          string
+	APIURL           string
+	BaseRef          string
+	Env              string
+	EventName        string
+	EventPath        string
+	GraphqlURL       string
+	HeadRef          string
+	Job              string
+	Path             string
+	Ref              string
+	RefName          string
+	RefProtected     bool
+	RefType          string
 
 	// Repository is the owner and repository name. For example, octocat/Hello-World
 	// It is not recommended to use this field to acquire the repository name
 	// but to use the Repo method instead.
-	Repository string `env:"GITHUB_REPOSITORY"`
+	Repository string
 
 	// RepositoryOwner is the repository owner. For example, octocat
 	// It is not recommended to use this field to acquire the repository owner
 	// but to use the Repo method instead.
-	RepositoryOwner string `env:"GITHUB_REPOSITORY_OWNER"`
+	RepositoryOwner string
 
-	RetentionDays int64  `env:"GITHUB_RETENTION_DAYS"`
-	RunAttempt    int64  `env:"GITHUB_RUN_ATTEMPT"`
-	RunID         int64  `env:"GITHUB_RUN_ID"`
-	RunNumber     int64  `env:"GITHUB_RUN_NUMBER"`
-	ServerURL     string `env:"GITHUB_SERVER_URL,default=https://github.com"`
-	SHA           string `env:"GITHUB_SHA"`
-	StepSummary   string `env:"GITHUB_STEP_SUMMARY"`
-	Workflow      string `env:"GITHUB_WORKFLOW"`
-	Workspace     string `env:"GITHUB_WORKSPACE"`
+	RetentionDays int64
+	RunAttempt    int64
+	RunID         int64
+	RunNumber     int64
+	ServerURL     string
+	SHA           string
+	StepSummary   string
+	Workflow      string
+	Workspace     string
 
 	// Event is populated by parsing the file at EventPath, if it exists.
 	Event map[string]any
@@ -576,6 +577,9 @@ func (c *Action) Context() (*GitHubContext, error) {
 	}
 	if v := c.getenv("GITHUB_ACTOR"); v != "" {
 		githubContext.Actor = v
+	}
+	if v := c.getenv("GITHUB_ACTOR_ID"); v != "" {
+		githubContext.ActorID = v
 	}
 	if v := c.getenv("GITHUB_API_URL"); v != "" {
 		githubContext.APIURL = v
