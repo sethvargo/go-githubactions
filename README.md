@@ -11,7 +11,7 @@ This library provides an SDK for authoring [GitHub Actions][gh-actions] in Go. I
 Download the library:
 
 ```text
-$ go get -u github.com/sethvargo/go-githubactions/...
+go get -u github.com/sethvargo/go-githubactions/...
 ```
 
 
