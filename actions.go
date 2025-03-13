@@ -489,15 +489,16 @@ type GitHubContext struct {
 	// but to use the Repo method instead.
 	RepositoryOwner string
 
-	RetentionDays int64
-	RunAttempt    int64
-	RunID         int64
-	RunNumber     int64
-	ServerURL     string
-	SHA           string
-	StepSummary   string
-	Workflow      string
-	Workspace     string
+	RetentionDays   int64
+	RunAttempt      int64
+	RunID           int64
+	RunNumber       int64
+	ServerURL       string
+	SHA             string
+	StepSummary     string
+	TriggeringActor string
+	Workflow        string
+	Workspace       string
 
 	// Event is populated by parsing the file at EventPath, if it exists.
 	Event map[string]any
@@ -658,6 +659,9 @@ func (c *Action) Context() (*GitHubContext, error) {
 	}
 	if v := c.getenv("GITHUB_STEP_SUMMARY"); v != "" {
 		githubContext.StepSummary = v
+	}
+	if v := c.getenv("GITHUB_TRIGGERING_ACTOR"); v != "" {
+		githubContext.TriggeringActor = v
 	}
 	if v := c.getenv("GITHUB_WORKFLOW"); v != "" {
 		githubContext.Workflow = v
