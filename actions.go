@@ -33,10 +33,27 @@ import (
 	"time"
 )
 
-var (
-	// osExit allows `os.Exit()` to be stubbed during testing.
-	osExit = os.Exit
-)
+// osExit allows `os.Exit()` to be stubbed during testing.
+var osExit = os.Exit
+
+// EnvMissingError is returned when a required environment variable is missing.
+type EnvMissingError struct {
+	Name string
+}
+
+func (e *EnvMissingError) Error() string {
+	return fmt.Sprintf("missing %s in environment", e.Name)
+}
+
+// RequestFailedError is returned when a request to the GitHub Actions runtime fails.
+type RequestFailedError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *RequestFailedError) Error() string {
+	return fmt.Sprintf("non-successful response from minting OIDC token (status %d): %s", e.StatusCode, e.Body)
+}
 
 const (
 	addMaskCmd = "add-mask"
@@ -63,7 +80,7 @@ const (
 	warningCmd = "warning"
 	errorCmd   = "error"
 
-	errFileCmdFmt = "unable to write command to the environment file: %s"
+	errFileCmdFmt = "unable to write command to the environment file: %w"
 )
 
 // New creates a new wrapper with helpers for outputting information in GitHub
@@ -131,7 +148,7 @@ func (c *Action) issueFileCommand(cmd *Command) (retErr error) {
 
 	filepath := c.getenv(e)
 	msg := []byte(cmd.Message + EOF)
-	f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		retErr = fmt.Errorf(errFileCmdFmt, err)
 		return
@@ -396,12 +413,12 @@ type idTokenResponse struct {
 func (c *Action) GetIDToken(ctx context.Context, audience string) (string, error) {
 	requestURL := c.getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
 	if requestURL == "" {
-		return "", fmt.Errorf("missing ACTIONS_ID_TOKEN_REQUEST_URL in environment")
+		return "", &EnvMissingError{Name: "ACTIONS_ID_TOKEN_REQUEST_URL"}
 	}
 
 	requestToken := c.getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
 	if requestToken == "" {
-		return "", fmt.Errorf("missing ACTIONS_ID_TOKEN_REQUEST_TOKEN in environment")
+		return "", &EnvMissingError{Name: "ACTIONS_ID_TOKEN_REQUEST_TOKEN"}
 	}
 
 	u, err := url.Parse(requestURL)
@@ -435,7 +452,7 @@ func (c *Action) GetIDToken(ctx context.Context, audience string) (string, error
 	body = bytes.TrimSpace(body)
 
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("non-successful response from minting OIDC token: %s", body)
+		return "", &RequestFailedError{StatusCode: resp.StatusCode, Body: string(body)}
 	}
 
 	var tokenResp idTokenResponse
