@@ -16,7 +16,7 @@ package githubactions
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -37,7 +37,7 @@ func (props *CommandProperties) String() string {
 		l = append(l, fmt.Sprintf("%s=%s", k, escapeProperty(v)))
 	}
 
-	sort.Strings(l)
+	slices.Sort(l)
 	return strings.Join(l, ",")
 }
 
@@ -46,9 +46,9 @@ func (props *CommandProperties) String() string {
 //
 // ::name key=value,key=value::message
 //
-//  Examples:
-//    ::warning::This is the message
-//    ::set-env name=MY_VAR::some value
+//	Examples:
+//	  ::warning::This is the message
+//	  ::set-env name=MY_VAR::some value
 type Command struct {
 	Name       string
 	Message    string
@@ -60,13 +60,14 @@ type Command struct {
 // ::name key=value,key=value::message
 func (cmd *Command) String() string {
 	// https://github.com/actions/toolkit/blob/9ad01e4fd30025e8858650d38e95cfe9193a3222/packages/core/src/command.ts#L43-L45
-	if cmd.Name == "" {
-		cmd.Name = "missing.command"
+	name := cmd.Name
+	if name == "" {
+		name = "missing.command"
 	}
 
 	var builder strings.Builder
 	builder.WriteString(cmdSeparator)
-	builder.WriteString(cmd.Name)
+	builder.WriteString(name)
 	if len(cmd.Properties) > 0 {
 		builder.WriteString(cmdPropertiesPrefix)
 		builder.WriteString(cmd.Properties.String())
@@ -86,7 +87,6 @@ func (cmd *Command) String() string {
 // The equivalent toolkit function can be found here:
 //
 // https://github.com/actions/toolkit/blob/9ad01e4fd30025e8858650d38e95cfe9193a3222/packages/core/src/command.ts#L92
-//
 func escapeData(v string) string {
 	v = strings.ReplaceAll(v, "%", "%25")
 	v = strings.ReplaceAll(v, "\r", "%0D")

@@ -14,4 +14,4 @@
 
 module github.com/sethvargo/go-githubactions
 
-go 1.21
+go 1.25
