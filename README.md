@@ -68,7 +68,7 @@ By default, GitHub Actions expects actions to be written in Node.js. For other l
 
 ```dockerfile
 # your-repo/Dockerfile
-FROM golang:1.18
+FROM golang:1.25
 WORKDIR /src
 COPY . .
 RUN go build -o /bin/app .
@@ -108,10 +108,9 @@ steps:
 Now we can precompile and publish our Go Action as a Docker container, but we need to make it much, much smaller first. This can be achieved using multi-stage Docker builds:
 
 ```dockerfile
-FROM golang:1.18 AS builder
+FROM golang:1.25 AS builder
 
-ENV GO111MODULE=on \
-  CGO_ENABLED=0 \
+ENV CGO_ENABLED=0 \
   GOOS=linux \
   GOARCH=amd64
 
@@ -149,4 +148,4 @@ much faster builds.
 
 
 [gh-actions]: https://github.com/features/actions
-[godoc]: https://godoc.org/github.com/sethvargo/go-githubactions
+[godoc]: https://pkg.go.dev/github.com/sethvargo/go-githubactions

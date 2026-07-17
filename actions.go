@@ -382,12 +382,12 @@ func (c *Action) Infof(msg string, args ...any) {
 func (c *Action) WithFieldsSlice(f []string) *Action {
 	m := make(CommandProperties)
 	for _, s := range f {
-		pair := strings.SplitN(s, "=", 2)
-		if len(pair) < 2 {
+		key, value, ok := strings.Cut(s, "=")
+		if !ok {
 			panic(fmt.Sprintf("%q is not a proper k=v pair!", s))
 		}
 
-		m[pair[0]] = pair[1]
+		m[key] = value
 	}
 
 	return c.WithFieldsMap(m)
@@ -431,7 +431,7 @@ func (c *Action) GetIDToken(ctx context.Context, audience string) (string, error
 		u.RawQuery = q.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create HTTP request: %w", err)
 	}
@@ -443,15 +443,13 @@ func (c *Action) GetIDToken(ctx context.Context, audience string) (string, error
 	}
 	defer resp.Body.Close()
 
-	// This has moved to the io package in Go 1.16, but we still support up to Go
-	// 1.13 for now.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1000))
 	if err != nil {
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 	body = bytes.TrimSpace(body)
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", &RequestFailedError{StatusCode: resp.StatusCode, Body: string(body)}
 	}
 
@@ -529,11 +527,8 @@ func (c *GitHubContext) Repo() (string, string) {
 
 	// Based on https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
 	if c.Repository != "" {
-		parts := strings.SplitN(c.Repository, "/", 2)
-		if len(parts) == 1 {
-			return parts[0], ""
-		}
-		return parts[0], parts[1]
+		owner, name, _ := strings.Cut(c.Repository, "/")
+		return owner, name
 	}
 
 	// If c.Repository is empty attempt to get the repo from the Event data.
